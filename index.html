@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Medio Maratón PDE — Plan 16 semanas</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0a0f;--surface:#12121a;--card:#1a1a26;--border:#2a2a3a;
+  --accent:#e8ff47;--accent2:#47c4ff;--text:#e8e8f0;--muted:#6a6a80;
+  --gym:#a78bfa;--taper:#ff6b47;--ok:#4ade80;--fail:#f87171;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;}
+
+/* NAV TABS */
+.nav{display:flex;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:100;}
+.nav-tab{padding:14px 22px;font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;background:none;border-top:none;border-left:none;border-right:none;transition:all .2s;white-space:nowrap;}
+.nav-tab:hover{color:var(--text);}
+.nav-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+/* PAGES */
+.page{display:none;}
+.page.active{display:block;}
+
+/* HEADER */
+header{padding:36px 28px 28px;border-bottom:1px solid var(--border);position:relative;overflow:hidden;}
+header::before{content:'21.1';font-family:'Bebas Neue',sans-serif;font-size:240px;color:rgba(232,255,71,0.04);position:absolute;right:-10px;top:-20px;line-height:1;pointer-events:none;user-select:none;}
+.header-label{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:3px;color:var(--accent);text-transform:uppercase;margin-bottom:10px;}
+h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(36px,7vw,72px);line-height:.95;margin-bottom:16px;}
+h1 span{color:var(--accent);}
+.header-meta{display:flex;gap:24px;flex-wrap:wrap;}
+.meta-item{display:flex;flex-direction:column;gap:2px;}
+.meta-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
+.meta-value{font-size:13px;font-weight:600;}
+
+/* LEGEND + STATS */
+.legend{display:flex;gap:16px;flex-wrap:wrap;padding:10px 28px;border-bottom:1px solid var(--border);background:var(--surface);}
+.legend-item{display:flex;align-items:center;gap:6px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);}
+.legend-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0;}
+.stats-row{display:flex;gap:10px;padding:16px 28px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.stat-box{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:10px 16px;min-width:90px;}
+.stat-val{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--accent);line-height:1;}
+.stat-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-top:2px;}
+
+/* FILTER */
+.filter-bar{display:flex;gap:8px;padding:12px 28px;flex-wrap:wrap;border-bottom:1px solid var(--border);}
+.filter-btn{padding:5px 12px;font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;border:1px solid var(--border);border-radius:20px;color:var(--muted);background:none;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.filter-btn:hover,.filter-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(232,255,71,.05);}
+
+main{padding:20px 28px 60px;}
+
+/* HISTORY TOGGLE */
+.history-toggle{display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:12px;padding:10px 14px;border:1px solid var(--border);border-radius:6px;background:var(--surface);user-select:none;}
+.history-toggle .ht-label{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);flex:1;}
+.history-toggle .ht-arrow{font-size:14px;color:var(--muted);transition:transform .3s;}
+.history-toggle.open .ht-arrow{transform:rotate(180deg);}
+.history-section{display:none;margin-bottom:24px;}
+.history-section.open{display:block;}
+
+/* PHASE SECTION */
+.phase-section{margin-bottom:28px;}
+.phase-title{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:10px;}
+.phase-line{flex:1;height:1px;background:var(--border);}
+
+.weeks-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:12px;}
+
+/* WEEK CARD */
+.week-card{background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;transition:transform .15s,border-color .15s;}
+.week-card:hover{transform:translateY(-2px);}
+.week-card.taper{border-color:rgba(255,107,71,.25);}
+.week-card.peak{border-color:rgba(232,255,71,.4);}
+.week-card.intro{border-color:rgba(71,196,255,.3);}
+.week-card.past{opacity:.55;}
+.week-card.current{border-color:var(--accent)!important;box-shadow:0 0 0 1px rgba(232,255,71,.2);}
+
+.progress-bar{height:3px;background:var(--border);}
+.progress-fill{height:100%;background:var(--accent);}
+.week-card.taper .progress-fill{background:var(--taper);}
+.week-card.intro .progress-fill{background:var(--accent2);}
+
+.week-header{display:flex;align-items:flex-start;padding:12px 14px 8px;border-bottom:1px solid var(--border);gap:8px;}
+.week-number{font-family:'Bebas Neue',sans-serif;font-size:40px;line-height:1;color:rgba(232,255,71,.10);min-width:44px;}
+.week-info{flex:1;}
+.week-dates{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:4px;}
+.week-badge{display:inline-block;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;padding:2px 7px;border-radius:3px;margin-bottom:4px;}
+.type-A{background:rgba(232,255,71,.10);color:var(--accent);}
+.type-B{background:rgba(71,196,255,.10);color:var(--accent2);}
+.type-taper{background:rgba(255,107,71,.12);color:var(--taper);}
+.type-race{background:rgba(232,255,71,.25);color:var(--accent);border:1px solid var(--accent);}
+.type-intro{background:rgba(71,196,255,.12);color:var(--accent2);}
+.current-badge{display:inline-block;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;padding:1px 6px;border-radius:3px;background:rgba(232,255,71,.2);color:var(--accent);margin-left:6px;}
+.week-volume{display:flex;align-items:baseline;gap:3px;}
+.vol-num{font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--accent);line-height:1;}
+.vol-unit{font-size:11px;color:var(--muted);}
+
+/* CALENDAR STRIP */
+.cal-strip{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border);}
+.cal-day{display:flex;flex-direction:column;align-items:center;padding:4px 1px 5px;border-right:1px solid var(--border);gap:2px;}
+.cal-day:last-child{border-right:none;}
+.cal-day-name{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;}
+.cal-day-num{font-family:'DM Mono',monospace;font-size:11px;color:var(--text);}
+.cal-pip{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;margin-top:1px;}
+.pip-run-long{background:rgba(232,255,71,.18);border:1.5px solid var(--accent);}
+.pip-run-short{background:rgba(71,196,255,.18);border:1.5px solid var(--accent2);}
+.pip-gym{background:rgba(167,139,250,.18);border:1.5px solid var(--gym);}
+.pip-race{background:rgba(232,255,71,.35);border:2px solid var(--accent);}
+.pip-empty{opacity:0;}
+
+/* SESSIONS */
+.sessions{padding:8px 12px 10px;display:flex;flex-direction:column;gap:4px;}
+.session{display:flex;align-items:flex-start;gap:7px;padding:6px 8px;border-radius:5px;background:rgba(255,255,255,.02);border-left:3px solid transparent;position:relative;}
+.session.run-long{border-left-color:var(--accent);}
+.session.run-short{border-left-color:var(--accent2);}
+.session.gym{border-left-color:var(--gym);}
+.session.race-day{border-left-color:var(--accent);background:rgba(232,255,71,.06);}
+.s-day{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;min-width:24px;padding-top:1px;}
+.s-icon{font-size:11px;min-width:15px;}
+.s-desc{font-size:11px;color:var(--text);line-height:1.4;flex:1;}
+.s-km{font-family:'DM Mono',monospace;font-size:11px;color:var(--accent);white-space:nowrap;}
+
+/* SESSION CHECK */
+.session-check{display:flex;align-items:center;gap:5px;margin-top:4px;padding-left:46px;}
+.check-btn{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--border);background:none;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;}
+.check-btn.done{border-color:var(--ok);background:rgba(74,222,128,.15);color:var(--ok);}
+.check-btn.missed{border-color:var(--fail);background:rgba(248,113,113,.15);color:var(--fail);}
+.check-input{flex:1;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:4px;padding:3px 7px;font-family:'DM Mono',monospace;font-size:10px;color:var(--text);outline:none;display:none;}
+.check-input.visible{display:block;}
+.check-input::placeholder{color:var(--muted);}
+
+.card-note{margin:0 12px 8px;padding:4px 8px;border-radius:4px;background:rgba(255,255,255,.02);border:1px dashed var(--border);font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);line-height:1.5;}
+
+/* WEEK PROGRESS */
+.week-prog{display:flex;align-items:center;gap:6px;padding:6px 12px 8px;border-top:1px solid var(--border);}
+.wp-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;}
+.wp-pips{display:flex;gap:4px;}
+.wp-pip{width:8px;height:8px;border-radius:50%;background:var(--border);}
+.wp-pip.done{background:var(--ok);}
+.wp-pip.missed{background:var(--fail);}
+
+/* ===== DICTIONARY PAGE ===== */
+.dict-page{padding:28px;}
+.dict-section{margin-bottom:36px;}
+.dict-title{font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--accent);margin-bottom:4px;}
+.dict-subtitle{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:18px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+.dict-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;}
+.dict-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px 18px;}
+.dict-card-title{font-family:'Bebas Neue',sans-serif;font-size:20px;margin-bottom:2px;}
+.dict-card-sub{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:8px;}
+.dict-card-desc{font-size:12px;color:var(--text);line-height:1.6;}
+.zone-pill{display:inline-block;font-family:'DM Mono',monospace;font-size:10px;padding:2px 8px;border-radius:12px;margin-bottom:8px;font-weight:500;}
+.z1{background:rgba(74,222,128,.12);color:#4ade80;border:1px solid rgba(74,222,128,.3);}
+.z2{background:rgba(71,196,255,.12);color:var(--accent2);border:1px solid rgba(71,196,255,.3);}
+.z3{background:rgba(251,191,36,.12);color:#fbbf24;border:1px solid rgba(251,191,36,.3);}
+.z4{background:rgba(248,113,113,.12);color:#f87171;border:1px solid rgba(248,113,113,.3);}
+
+.ex-group{margin-bottom:6px;}
+.ex-group-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;}
+.ex-tag{display:inline-block;font-family:'DM Mono',monospace;font-size:10px;padding:3px 8px;border-radius:4px;margin:2px;background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.25);color:var(--gym);}
+
+@media(max-width:600px){
+  header,main,.dict-page{padding-left:16px;padding-right:16px;}
+  .legend,.stats-row,.filter-bar{padding-left:16px;padding-right:16px;}
+  .weeks-grid{grid-template-columns:1fr;}
+  .dict-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <button class="nav-tab active" onclick="showPage('plan',this)">Plan</button>
+  <button class="nav-tab" onclick="showPage('dict',this)">Diccionario</button>
+</div>
+
+<!-- ===== PLAN PAGE ===== -->
+<div class="page active" id="page-plan">
+
+<header>
+  <div class="header-label">▸ Plan de entrenamiento · 16 semanas</div>
+  <h1>MEDIO MARATÓN<br><span>PUNTA DEL ESTE</span></h1>
+  <div class="header-meta">
+    <div class="meta-item"><span class="meta-label">Inicio</span><span class="meta-value">16 May 2026</span></div>
+    <div class="meta-item"><span class="meta-label">Carrera</span><span class="meta-value">6 Sep 2026</span></div>
+    <div class="meta-item"><span class="meta-label">Días fijos</span><span class="meta-value">Mar · Jue · Dom</span></div>
+    <div class="meta-item"><span class="meta-label">Alternativa</span><span class="meta-value">Lun · Mié · Vie</span></div>
+  </div>
+</header>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#e8ff47"></div>Fondo largo</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#47c4ff"></div>Fondo corto / pasadas</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#a78bfa"></div>Gimnasio</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ff6b47"></div>Taper</div>
+</div>
+
+<div class="stats-row">
+  <div class="stat-box"><div class="stat-val">16</div><div class="stat-label">Semanas</div></div>
+  <div class="stat-box"><div class="stat-val">~470</div><div class="stat-label">Km totales</div></div>
+  <div class="stat-box"><div class="stat-val">15→21</div><div class="stat-label">Fondo máx</div></div>
+  <div class="stat-box"><div class="stat-val">3</div><div class="stat-label">Sem taper</div></div>
+  <div class="stat-box" id="stat-done"><div class="stat-val" id="stat-done-val">0</div><div class="stat-label">Sesiones ✓</div></div>
+</div>
+
+<div class="filter-bar">
+  <button class="filter-btn active" onclick="filterType('all',this)">Todas</button>
+  <button class="filter-btn" onclick="filterType('A',this)">Semana A</button>
+  <button class="filter-btn" onclick="filterType('B',this)">Semana B</button>
+</div>
+
+<main>
+  <div id="history-toggle" class="history-toggle" onclick="toggleHistory()">
+    <span class="ht-label">📦 Semanas anteriores</span>
+    <span id="history-count" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);"></span>
+    <span class="ht-arrow">▼</span>
+  </div>
+  <div class="history-section" id="history-section">
+    <div class="weeks-grid" id="grid-history"></div>
+  </div>
+  <div id="grid-current"></div>
+</main>
+</div>
+
+<!-- ===== DICTIONARY PAGE ===== -->
+<div class="page" id="page-dict">
+<div class="dict-page">
+
+  <div class="dict-section">
+    <div class="dict-title">Zonas de Entrenamiento</div>
+    <div class="dict-subtitle">Intensidad cardíaca — referencia por FC máxima</div>
+    <div class="dict-grid">
+      <div class="dict-card">
+        <span class="zone-pill z1">Z1 — Recuperación</span>
+        <div class="dict-card-title">Zona 1</div>
+        <div class="dict-card-sub">50–60% FC máx</div>
+        <div class="dict-card-desc">Esfuerzo muy suave. Podés mantener una conversación sin problema. Se usa en días de recuperación activa o calentamiento. No genera fatiga acumulada.</div>
+      </div>
+      <div class="dict-card">
+        <span class="zone-pill z2">Z2 — Aeróbico base</span>
+        <div class="dict-card-title">Zona 2</div>
+        <div class="dict-card-sub">60–70% FC máx</div>
+        <div class="dict-card-desc">El pan y manteca del plan. Ritmo cómodo, conversación posible con algún esfuerzo. Acá se construye la base aeróbica y la capacidad de quemar grasa como combustible. Es el ritmo de todos los fondos largos.</div>
+      </div>
+      <div class="dict-card">
+        <span class="zone-pill z3">Z3 — Tempo</span>
+        <div class="dict-card-title">Zona 3</div>
+        <div class="dict-card-sub">70–80% FC máx</div>
+        <div class="dict-card-desc">Ritmo "incómodo pero sostenible". Conversación cortada, frases cortas. Mejora el umbral de lactato. Aparece en los tempos y en los fondos con ritmo objetivo del taper.</div>
+      </div>
+      <div class="dict-card">
+        <span class="zone-pill z4">Z4 — Umbral / Pasadas</span>
+        <div class="dict-card-title">Zona 4</div>
+        <div class="dict-card-sub">80–90% FC máx</div>
+        <div class="dict-card-desc">Alta intensidad. No podés hablar. Se usa en pasadas (repeticiones cortas con recuperación entre ellas). Mejora la velocidad máxima y la economía de carrera. Se aplica en intervalos: ej. 6×600m con 2' de trote suave entre cada uno.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dict-section">
+    <div class="dict-title">Tipos de Sesión</div>
+    <div class="dict-subtitle">Running — descripción de cada formato</div>
+    <div class="dict-grid">
+      <div class="dict-card">
+        <div class="dict-card-title">Fondo Largo</div>
+        <div class="dict-card-sub">Semanas A · Z2</div>
+        <div class="dict-card-desc">Sesión principal del plan. Duración extendida a ritmo suave (Z2). Objetivo: acumular tiempo en pies, desarrollar resistencia aeróbica y adaptar tendones y articulaciones. No importa el tiempo, importa el ritmo tranquilo.</div>
+      </div>
+      <div class="dict-card">
+        <div class="dict-card-title">Fondo Corto</div>
+        <div class="dict-card-sub">Semanas B · Z2</div>
+        <div class="dict-card-desc">Rodaje moderado a ritmo cómodo. Mantiene el volumen semanal sin generar fatiga extra. Sirve como complemento al día de pasadas o como recuperación activa entre semanas A.</div>
+      </div>
+      <div class="dict-card">
+        <div class="dict-card-title">Pasadas</div>
+        <div class="dict-card-sub">Semanas B · Z4</div>
+        <div class="dict-card-desc">Repeticiones cortas a alta intensidad con recuperación entre ellas. Ejemplo: 6×600m Z4 con 90"–2' de trote suave entre cada repetición. Mejoran velocidad y economía de carrera. Empezás y terminás con 1–1.5 km de calentamiento/enfriamiento Z1–2.</div>
+      </div>
+      <div class="dict-card">
+        <div class="dict-card-title">Tempo</div>
+        <div class="dict-card-sub">Construcción II · Z3–4</div>
+        <div class="dict-card-desc">Bloques sostenidos a ritmo Z3–Z4. Ejemplo: 3×4km a ritmo objetivo de carrera con 3' de recuperación. Más exigente que un fondo, menos explosivo que una pasada. Aparece en la fase de construcción avanzada.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dict-section">
+    <div class="dict-title">Ejercicios de Gimnasio</div>
+    <div class="dict-subtitle">Mancuernas, máquinas y cables</div>
+    <div class="dict-grid">
+      <div class="dict-card">
+        <div class="dict-card-title">Prensa Inclinada</div>
+        <div class="dict-card-sub">Tren inferior — cuádriceps, glúteo</div>
+        <div class="dict-card-desc">Máquina de prensa con respaldo inclinado. Empujás el peso con los pies. Regulás el ángulo de los pies para orientar el trabajo hacia cuádriceps (pies bajos) o glúteo (pies altos). Bajo impacto en rodilla.</div>
+      </div>
+      <div class="dict-card">
+        <div class="dict-card-title">Curl Femoral</div>
+        <div class="dict-card-sub">Tren inferior — isquiotibiales</div>
+        <div class="dict-card-desc">Máquina de curl acostado o sentado. Flexión de rodilla contra resistencia. Clave para corredores: equilibra la carga entre cuádriceps e isquiotibiales, reduciendo riesgo de lesión.</div>
+      </div>
+      <div class="dict-card">
+        <div class="dict-card-title">Extensión de Cuádriceps</div>
+        <div class="dict-card-sub">Tren inferior — cuádriceps</div>
+        <div class="dict-card-desc">Máquina de extensión sentado. Extensión de rodilla contra resistencia. Fortalece el cuádriceps de forma aislada. Combinarlo siempre con curl femoral para no generar desbalance.</div>
+      </div>
+      <div class="dict-card">
+        <div class="dict-card-title">Hip Thrust con Mancuerna</div>
+        <div class="dict-card-sub">Tren inferior — glúteo mayor</div>
+        <div class="dict-card-desc">Apoyás la espalda en un banco, mancuerna sobre las caderas, empujás con los talones. El ejercicio más efectivo para activar glúteo mayor. Fundamental para la propulsión al correr y proteger la zona lumbar.</div>
+      </div>
+      <div class="dict-card">
+        <div class="dict-card-title">Estocadas con Mancuernas</div>
+        <div class="dict-card-sub">Tren inferior — glúteo, cuádriceps</div>
+        <div class="dict-card-desc">Paso largo hacia adelante, rodilla trasera baja. Una mancuerna en cada mano. Trabajo unilateral que mejora estabilidad y equilibrio, clave para corredores. Podés hacerlas estáticas o caminando.</div>
+      </div>
+      <div class="dict-card">
+        <div class="dict-card-title">Remo en Polea Baja</div>
+        <div class="dict-card-sub">Tren superior — dorsal, romboides</div>
+        <div class="dict-card-desc">Sentado frente a la polea, tirás el agarre hacia el abdomen con los codos pegados al cuerpo. Trabaja dorsales y romboides. Mejora la postura al correr y contrarresta el trabajo de press.</div>
+      </div>
+      <div class="dict-card">
+        <div class="dict-card-title">Remo con Mancuerna</div>
+        <div class="dict-card-sub">Tren superior — dorsal unilateral</div>
+        <div class="dict-card-desc">Un brazo apoyado en el banco, tirás la mancuerna hacia la cadera con el otro. Trabajo unilateral de dorsal. Permite mayor rango de movimiento que la barra.</div>
+      </div>
+      <div class="dict-card">
+        <div class="dict-card-title">Jalón al Pecho en Polea</div>
+        <div class="dict-card-sub">Tren superior — dorsal, bíceps</div>
+        <div class="dict-card-desc">Tirás la barra o agarre desde arriba hacia el pecho. Trabaja dorsal ancho y bíceps. Alternativa accesible a la dominada. Variá el agarre (ancho/estrecho, prono/supino) para distintos énfasis.</div>
+      </div>
+      <div class="dict-card">
+        <div class="dict-card-title">Pullover en Polea</div>
+        <div class="dict-card-sub">Tren superior — dorsal, serrato</div>
+        <div class="dict-card-desc">De pie, brazos extendidos, tirás la cuerda hacia abajo en arco. Trabaja el dorsal en un plano diferente al jalón, más énfasis en la inserción inferior. Buen complemento para amplitud de espalda.</div>
+      </div>
+      <div class="dict-card">
+        <div class="dict-card-title">Press Inclinado Mancuernas</div>
+        <div class="dict-card-sub">Tren superior — pectoral alto, tríceps</div>
+        <div class="dict-card-desc">Banco inclinado 30–45°, empujás las mancuernas hacia arriba. Trabaja pectoral superior y tríceps. Las mancuernas permiten mayor rango y corrección de desbalances laterales.</div>
+      </div>
+      <div class="dict-card">
+        <div class="dict-card-title">Press de Hombro Mancuernas</div>
+        <div class="dict-card-sub">Tren superior — deltoides, tríceps</div>
+        <div class="dict-card-desc">Sentado o de pie, empujás las mancuernas desde la altura de los hombros hacia arriba. Trabaja los tres fascículos del deltoides con énfasis en el anterior y medio. Espalda recta, sin hiperextender la lumbar.</div>
+      </div>
+      <div class="dict-card">
+        <div class="dict-card-title">Elevaciones Laterales en Cable</div>
+        <div class="dict-card-sub">Tren superior — deltoides medio</div>
+        <div class="dict-card-desc">De pie, cable a un lado a la altura de la cadera, levantás el brazo hacia el costado hasta la altura del hombro. El cable mantiene tensión constante durante todo el recorrido, más efectivo que mancuerna para este músculo.</div>
+      </div>
+      <div class="dict-card">
+        <div class="dict-card-title">Tríceps en Polea</div>
+        <div class="dict-card-sub">Tren superior — tríceps</div>
+        <div class="dict-card-desc">De pie frente a la polea alta, codos pegados al cuerpo, extendés los antebrazos hacia abajo. Podés usar cuerda (más énfasis en cabeza lateral) o barra recta. Ejercicio base para masa y definición de tríceps.</div>
+      </div>
+      <div class="dict-card">
+        <div class="dict-card-title">Curl Bíceps Mancuerna</div>
+        <div class="dict-card-sub">Tren superior — bíceps</div>
+        <div class="dict-card-desc">Flexión de codo con mancuerna. Podés hacerlo sentado (más estricto), de pie, alternado o simultáneo. Evitá balancear el torso para no quitar trabajo al bíceps.</div>
+      </div>
+      <div class="dict-card">
+        <div class="dict-card-title">Core — Plancha + Rueda</div>
+        <div class="dict-card-sub">Abdomen — estabilidad</div>
+        <div class="dict-card-desc">Plancha: posición de flexión sostenida, cuerpo recto de cabeza a talones. Trabaja el core en tensión isométrica. Rueda abdominal: desde rodillas, rodás la rueda hacia adelante y volvés. Uno de los ejercicios más efectivos para recto abdominal y oblicuos.</div>
+      </div>
+      <div class="dict-card">
+        <div class="dict-card-title">Core — Crunch Declinado + Oblicuos</div>
+        <div class="dict-card-sub">Abdomen — definición</div>
+        <div class="dict-card-desc">Crunch en banco declinado: mayor rango que en el suelo, más exigente. Oblicuos: rotación de torso en polea o con mancuerna (russian twist, woodchop). Complementan la plancha para trabajar todo el perímetro abdominal.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+const DAY_NAMES=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+const MONDAYS=[
+  [2026,4,16],[2026,4,23],[2026,4,30],[2026,5,6],
+  [2026,5,13],[2026,5,20],[2026,5,27],[2026,6,4],
+  [2026,6,11],[2026,6,18],[2026,6,25],[2026,7,1],
+  [2026,7,8],[2026,7,15],[2026,7,22],[2026,7,29],
+];
+const PIP_CLS={'run-long':'pip-run-long','run-short':'pip-run-short','gym':'pip-gym','race-day':'pip-race'};
+const PIP_ICO={'run-long':'🏃','run-short':'⚡','gym':'💪','race-day':'🏁'};
+const TYPE_CLS={A:'type-A',B:'type-B',taper:'type-taper',race:'type-race',intro:'type-intro'};
+const TYPE_LBL={A:'SEMANA A',B:'SEMANA B',taper:'TAPER',race:'CARRERA',intro:'SEMANA A'};
+
+function weekDays(i){const[y,m,d]=MONDAYS[i];return Array.from({length:7},(_,j)=>new Date(y,m,d+j).getDate());}
+function dateRange(i){
+  const[y,m,d]=MONDAYS[i];
+  const s=new Date(y,m,d),e=new Date(y,m,d+6);
+  const mo=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  return s.getMonth()===e.getMonth()?`${s.getDate()}–${e.getDate()} ${mo[s.getMonth()]}`:
+    `${s.getDate()} ${mo[s.getMonth()]} – ${e.getDate()} ${mo[e.getMonth()]}`;
+}
+function weekStart(i){const[y,m,d]=MONDAYS[i];return new Date(y,m,d);}
+function weekEnd(i){const[y,m,d]=MONDAYS[i];return new Date(y,m,d+6,23,59,59);}
+
+const TODAY=new Date();
+function isCurrentWeek(i){return TODAY>=weekStart(i)&&TODAY<=weekEnd(i);}
+function isPastWeek(i){return TODAY>weekEnd(i);}
+
+const WEEKS=[
+  {n:1,phase:'base',type:'intro',vol:15,pct:20,
+   note:'S1 incompleta: arrancás el Dom 17. Solo una sesión de entrada.',
+   train:[6],
+   sess:[{d:6,cls:'run-long',icon:'🏃',desc:'Fondo largo suave Z2 — sesión de arranque',km:'15 km'}]},
+  {n:2,phase:'base',type:'B',vol:22,pct:28,train:[1,3,6],
+   sess:[{d:1,cls:'run-short',icon:'⚡',desc:'Fondo corto Z2',km:'10 km'},
+         {d:3,cls:'gym',icon:'🏋️',desc:'Prensa · Curl femoral · Remo polea · Press inclinado MC · Core',km:''},
+         {d:6,cls:'run-short',icon:'🔄',desc:'Pasadas 6×600m Z4 + calentamiento',km:'12 km'}]},
+  {n:3,phase:'base',type:'A',vol:24,pct:30,train:[1,3,6],
+   sess:[{d:1,cls:'run-long',icon:'🏃',desc:'Fondo largo Z2',km:'16 km'},
+         {d:3,cls:'gym',icon:'🏋️',desc:'Prensa · Curl femoral · Ext. cuádriceps · Remo MC · Jalón polea · Core plancha',km:''},
+         {d:6,cls:'gym',icon:'🏋️',desc:'Hip thrust MC · Estocadas MC · Press hombro MC · Elevaciones cable · Tríceps polea · Curl bíceps MC · Core crunch',km:''}]},
+  {n:4,phase:'base',type:'B',vol:18,pct:22,train:[1,3,6],
+   note:'Semana de recuperación — volumen reducido.',
+   sess:[{d:1,cls:'run-short',icon:'⚡',desc:'Fondo corto regenerativo Z1–2',km:'9 km'},
+         {d:3,cls:'gym',icon:'🏋️',desc:'Full body liviano: Prensa · Hip thrust · Jalón · Press inclinado MC · Core',km:''},
+         {d:6,cls:'run-short',icon:'🔄',desc:'Pasadas 5×500m Z4 + calentamiento',km:'10 km'}]},
+  {n:5,phase:'build1',type:'A',vol:26,pct:38,train:[1,3,6],
+   sess:[{d:1,cls:'run-long',icon:'🏃',desc:'Fondo largo Z2',km:'17 km'},
+         {d:3,cls:'gym',icon:'🏋️',desc:'Prensa · Curl femoral · Ext. cuádriceps · Remo polea · Press inclinado MC · Core plancha + rueda',km:''},
+         {d:6,cls:'gym',icon:'🏋️',desc:'Hip thrust MC · Estocadas MC · Pullover polea · Press hombro MC · Elevaciones cable · Tríceps polea · Core crunch',km:''}]},
+  {n:6,phase:'build1',type:'B',vol:27,pct:42,train:[1,3,6],
+   sess:[{d:1,cls:'run-short',icon:'⚡',desc:'Fondo corto Z2',km:'12 km'},
+         {d:3,cls:'gym',icon:'🏋️',desc:'Full body: Prensa · Hip thrust · Remo polea · Jalón · Press inclinado MC · Core',km:''},
+         {d:6,cls:'run-short',icon:'🔄',desc:'Tempo + pasadas 2×3km Z3–4',km:'15 km'}]},
+  {n:7,phase:'build1',type:'A',vol:29,pct:48,train:[1,3,6],
+   sess:[{d:1,cls:'run-long',icon:'🏃',desc:'Fondo largo Z2',km:'18 km'},
+         {d:3,cls:'gym',icon:'🏋️',desc:'Prensa · Curl femoral · Ext. cuádriceps · Remo MC · Jalón polea · Core plancha + rueda',km:''},
+         {d:6,cls:'gym',icon:'🏋️',desc:'Hip thrust MC · Estocadas MC · Press hombro MC · Elevaciones cable · Tríceps polea · Curl bíceps MC · Core oblicuos',km:''}]},
+  {n:8,phase:'build1',type:'B',vol:20,pct:32,train:[1,3,6],
+   note:'Semana de recuperación — bajás volumen.',
+   sess:[{d:1,cls:'run-short',icon:'⚡',desc:'Fondo corto regenerativo Z1–2',km:'10 km'},
+         {d:3,cls:'gym',icon:'🏋️',desc:'Full body liviano: Prensa · Hip thrust · Remo MC · Press inclinado MC · Core',km:''},
+         {d:6,cls:'run-short',icon:'🔄',desc:'Pasadas 6×600m Z4 + calentamiento',km:'12 km'}]},
+  {n:9,phase:'build2',type:'A',vol:30,pct:56,train:[1,3,6],
+   sess:[{d:1,cls:'run-long',icon:'🏃',desc:'Fondo largo Z2 — incorporar ritmo objetivo',km:'19 km'},
+         {d:3,cls:'gym',icon:'🏋️',desc:'Prensa · Curl femoral · Ext. cuádriceps · Remo polea · Press inclinado MC · Core plancha + rueda',km:''},
+         {d:6,cls:'gym',icon:'🏋️',desc:'Hip thrust MC · Estocadas MC · Pullover polea · Press hombro MC · Elevaciones cable · Tríceps polea · Core crunch declinado',km:''}]},
+  {n:10,phase:'build2',type:'B',vol:28,pct:60,train:[1,3,6],
+   sess:[{d:1,cls:'run-short',icon:'⚡',desc:'Fondo corto Z2',km:'13 km'},
+         {d:3,cls:'gym',icon:'🏋️',desc:'Full body: Prensa · Hip thrust · Jalón · Remo MC · Press hombro MC · Core',km:''},
+         {d:6,cls:'run-short',icon:'🔄',desc:'Tempo 3×4km Z3–4',km:'16 km'}]},
+  {n:11,phase:'build2',type:'A',vol:33,pct:100,train:[1,3,6],
+   note:'Semana pico — máximo volumen del plan.',
+   sess:[{d:1,cls:'run-long',icon:'🏃',desc:'Fondo largo MÁXIMO — ritmo carrera',km:'21 km'},
+         {d:3,cls:'gym',icon:'🏋️',desc:'Prensa · Curl femoral · Ext. cuádriceps · Remo polea · Press inclinado MC · Core plancha + rueda',km:''},
+         {d:6,cls:'gym',icon:'🏋️',desc:'Hip thrust MC · Estocadas MC · Pullover polea · Press hombro MC · Elevaciones cable · Tríceps polea · Core crunch',km:''}]},
+  {n:12,phase:'build2',type:'B',vol:21,pct:40,train:[1,3,6],
+   note:'Semana de recuperación post-pico.',
+   sess:[{d:1,cls:'run-short',icon:'⚡',desc:'Fondo corto regenerativo Z1–2',km:'10 km'},
+         {d:3,cls:'gym',icon:'🏋️',desc:'Full body liviano: Prensa · Hip thrust · Jalón · Press inclinado MC · Core',km:''},
+         {d:6,cls:'run-short',icon:'🔄',desc:'Pasadas suaves 5×600m Z3',km:'12 km'}]},
+  {n:13,phase:'taper',type:'taper',vol:25,pct:55,train:[1,3,6],
+   sess:[{d:1,cls:'run-long',icon:'🏃',desc:'Fondo moderado Z2',km:'17 km'},
+         {d:3,cls:'gym',icon:'🏋️',desc:'Tren inferior liviano: Prensa · Hip thrust · Core plancha',km:''},
+         {d:6,cls:'gym',icon:'🏋️',desc:'Tren superior liviano: Jalón · Press inclinado MC · Elevaciones cable · Movilidad',km:''}]},
+  {n:14,phase:'taper',type:'taper',vol:18,pct:38,train:[1,3,6],
+   sess:[{d:1,cls:'run-short',icon:'⚡',desc:'Fondo corto Z2',km:'10 km'},
+         {d:3,cls:'gym',icon:'🏋️',desc:'Liviano: Prensa · Remo MC · Press hombro MC · Core',km:''},
+         {d:6,cls:'run-short',icon:'🔄',desc:'Pasadas cortas 4×400m Z4',km:'9 km'}]},
+  {n:15,phase:'taper',type:'taper',vol:12,pct:20,train:[1,3,6],
+   sess:[{d:1,cls:'run-short',icon:'⚡',desc:'Rodaje corto activación Z2',km:'8 km'},
+         {d:3,cls:'gym',icon:'🏋️',desc:'Muy liviano: movilidad + elongación + core suave',km:''},
+         {d:6,cls:'gym',icon:'🏋️',desc:'Descanso activo — caminata o elongación solamente',km:''}]},
+  {n:16,phase:'taper',type:'race',vol:21.1,pct:100,
+   note:'Dom 6 Sep — Media Maratón Punta del Este.',
+   train:[1,6],
+   sess:[{d:1,cls:'run-short',icon:'⚡',desc:'Rodaje breve — soltar piernas',km:'4 km'},
+         {d:6,cls:'race-day',icon:'🏁',desc:'MEDIO MARATÓN PUNTA DEL ESTE',km:'21.1 km'}]},
+];
+
+// Storage helpers
+function getState(){return JSON.parse(localStorage.getItem('pde_plan')||'{}');}
+function saveState(s){localStorage.setItem('pde_plan',JSON.stringify(s));}
+function sessKey(wn,di){return `w${wn}_d${di}`;}
+
+function countDone(){
+  const s=getState();
+  return Object.values(s).filter(v=>v&&v.status==='done').length;
+}
+
+function buildCard(w,isCurrent,isPast){
+  const i=w.n-1;
+  const days=weekDays(i);
+  const sMap={};
+  w.sess.forEach(s=>sMap[s.d]=s);
+  const state=getState();
+
+  const cal=DAY_NAMES.map((name,di)=>{
+    const s=sMap[di];
+    const pc=s?PIP_CLS[s.cls]||'pip-empty':'pip-empty';
+    const pi=s?PIP_ICO[s.cls]||'':'';
+    return `<div class="cal-day">
+      <span class="cal-day-name">${name}</span>
+      <span class="cal-day-num">${days[di]}</span>
+      <div class="cal-pip ${pc}">${pi}</div>
+    </div>`;
+  }).join('');
+
+  const sess=w.sess.map(s=>{
+    const key=sessKey(w.n,s.d);
+    const st=state[key]||{};
+    const doneCls=st.status==='done'?'done':'';
+    const missedCls=st.status==='missed'?'missed':'';
+    const noteVis=st.status==='missed'?'visible':'';
+    const noteVal=st.note||'';
+    return `
+    <div class="session ${s.cls}" id="sess-${key}">
+      <span class="s-day">${DAY_NAMES[s.d]}</span>
+      <span class="s-icon">${s.icon}</span>
+      <span class="s-desc">${s.desc}</span>
+      ${s.km?`<span class="s-km">${s.km}</span>`:''}
+    </div>
+    <div class="session-check">
+      <button class="check-btn ${doneCls}" title="Cumplido" onclick="markSession('${key}','done',${w.n})">✓</button>
+      <button class="check-btn ${missedCls}" title="No cumplido" onclick="markSession('${key}','missed',${w.n})">✗</button>
+      <input class="check-input ${noteVis}" id="note-${key}" placeholder="¿Por qué no? (opcional)" value="${noteVal}" onblur="saveNote('${key}')">
+    </div>`;
+  }).join('');
+
+  // week pip progress
+  const totalSess=w.sess.length;
+  const pips=w.sess.map(s=>{
+    const st=state[sessKey(w.n,s.d)]||{};
+    const cls=st.status==='done'?'done':st.status==='missed'?'missed':'';
+    return `<div class="wp-pip ${cls}"></div>`;
+  }).join('');
+
+  const cardCls=['week-card',
+    w.phase==='taper'?'taper':'',
+    w.n===11?'peak':'',
+    w.type==='intro'?'intro':'',
+    isCurrent?'current':'',
+    isPast?'past':'',
+  ].filter(Boolean).join(' ');
+
+  const curBadge=isCurrent?`<span class="current-badge">▸ HOY</span>`:'';
+  const noteHtml=w.note?`<div class="card-note">⚡ ${w.note}</div>`:'';
+  const flexHtml=w.n>1&&w.n<16?`<div class="card-note">Alternativa: Lun · Mié · Vie si el domingo está ocupado</div>`:'';
+
+  return `<div class="${cardCls}" id="card-w${w.n}">
+    <div class="progress-bar"><div class="progress-fill" style="width:${w.pct}%"></div></div>
+    <div class="week-header">
+      <div class="week-number">${String(w.n).padStart(2,'0')}</div>
+      <div class="week-info">
+        <div class="week-dates">${dateRange(i)} ${curBadge}</div>
+        <span class="week-badge ${TYPE_CLS[w.type]}">${TYPE_LBL[w.type]}</span>
+        <div class="week-volume"><span class="vol-num">${w.vol}</span><span class="vol-unit"> km vol.</span></div>
+      </div>
+    </div>
+    <div class="cal-strip">${cal}</div>
+    <div class="sessions">${sess}</div>
+    ${noteHtml}${flexHtml}
+    <div class="week-prog">
+      <span class="wp-label">PROGRESO</span>
+      <div class="wp-pips">${pips}</div>
+    </div>
+  </div>`;
+}
+
+let curType='all';
+
+function render(){
+  const past=WEEKS.filter(w=>isPastWeek(w.n-1));
+  const current=WEEKS.filter(w=>isCurrentWeek(w.n-1));
+  const upcoming=WEEKS.filter(w=>!isPastWeek(w.n-1)&&!isCurrentWeek(w.n-1));
+
+  // history
+  const histGrid=document.getElementById('grid-history');
+  const filtered_past=past.filter(w=>curType==='all'||w.type===curType||(curType==='A'&&w.type==='intro'));
+  histGrid.innerHTML=filtered_past.map(w=>buildCard(w,false,true)).join('');
+  const ht=document.getElementById('history-toggle');
+  const hc=document.getElementById('history-count');
+  hc.textContent=filtered_past.length?`${filtered_past.length} semana${filtered_past.length>1?'s':''}`:'ninguna';
+  ht.style.display=filtered_past.length?'flex':'none';
+
+  // current + upcoming grouped by phase
+  const show=[...current,...upcoming].filter(w=>curType==='all'||w.type===curType||(curType==='A'&&w.type==='intro'));
+
+  const phases=[
+    {key:'base',label:'Fase Base — S1–4'},
+    {key:'build1',label:'Construcción I — S5–8'},
+    {key:'build2',label:'Construcción II — S9–12'},
+    {key:'taper',label:'Taper & Carrera — S13–16'},
+  ];
+
+  const gc=document.getElementById('grid-current');
+  gc.innerHTML='';
+  phases.forEach(({key,label})=>{
+    const ws=show.filter(w=>w.phase===key);
+    if(!ws.length)return;
+    const sec=document.createElement('div');
+    sec.className='phase-section';
+    sec.innerHTML=`<div class="phase-title">${label}<span class="phase-line"></span></div>
+      <div class="weeks-grid">${ws.map(w=>buildCard(w,isCurrentWeek(w.n-1),false)).join('')}</div>`;
+    gc.appendChild(sec);
+  });
+
+  // update done stat
+  document.getElementById('stat-done-val').textContent=countDone();
+}
+
+function markSession(key,status,wn){
+  const s=getState();
+  if(s[key]&&s[key].status===status){
+    // toggle off
+    delete s[key];
+  } else {
+    s[key]={status,note:s[key]?.note||''};
+  }
+  saveState(s);
+  // show/hide note input
+  const noteEl=document.getElementById('note-'+key);
+  if(noteEl){
+    const st=getState()[key];
+    noteEl.classList.toggle('visible',!!(st&&st.status==='missed'));
+  }
+  render();
+}
+
+function saveNote(key){
+  const s=getState();
+  const el=document.getElementById('note-'+key);
+  if(el&&s[key]){s[key].note=el.value;saveState(s);}
+}
+
+function toggleHistory(){
+  const toggle=document.getElementById('history-toggle');
+  const section=document.getElementById('history-section');
+  toggle.classList.toggle('open');
+  section.classList.toggle('open');
+}
+
+function filterType(t,btn){
+  curType=t;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function showPage(id,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  btn.classList.add('active');
+}
+
+render();
+</script>
+</body>
+</html>
