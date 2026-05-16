@@ -1,6 +1,6 @@
 {
-  "name": "Plan Entrenamiento",
-  "short_name": "Plan Entrenamiento",
+  "name": "RunPlan",
+  "short_name": "RunPlan",
   "description": "Plan medio maratón Punta del Este 2026",
   "start_url": "/Plan-entrenamiento/",
   "scope": "/Plan-entrenamiento/",
