@@ -1,4 +1,4 @@
-const CACHE = 'pde-plan-v1';
+const CACHE = 'pde-plan-v2';
 const ASSETS = [
   '/Plan-entrenamiento/',
   '/Plan-entrenamiento/index.html',
