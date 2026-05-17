@@ -184,29 +184,17 @@ main{padding:20px 28px 60px;}
 <div class="page active" id="page-plan">
 
 <header>
-  <div class="header-label">▸ Plan de entrenamiento · 16 semanas</div>
   <h1>MEDIO MARATÓN<br><span>PUNTA DEL ESTE</span></h1>
   <div class="header-meta">
-    <div class="meta-item"><span class="meta-label">Inicio</span><span class="meta-value">16 May 2026</span></div>
     <div class="meta-item"><span class="meta-label">Carrera</span><span class="meta-value">6 Sep 2026</span></div>
-    <div class="meta-item"><span class="meta-label">Días fijos</span><span class="meta-value">Mar · Jue · Dom</span></div>
-    <div class="meta-item"><span class="meta-label">Alternativa</span><span class="meta-value">Lun · Mié · Vie</span></div>
+    <div class="meta-item"><span class="meta-label">Semanas restantes</span><span class="meta-value" id="weeks-left">—</span></div>
   </div>
 </header>
 
-<div class="legend">
-  <div class="legend-item"><div class="legend-dot" style="background:#e8ff47"></div>Fondo largo</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#47c4ff"></div>Fondo corto / pasadas</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#a78bfa"></div>Gimnasio</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#ff6b47"></div>Taper</div>
-</div>
 
 <div class="stats-row">
-  <div class="stat-box"><div class="stat-val">16</div><div class="stat-label">Semanas</div></div>
-  <div class="stat-box"><div class="stat-val">~470</div><div class="stat-label">Km totales</div></div>
-  <div class="stat-box"><div class="stat-val">15→21</div><div class="stat-label">Fondo máx</div></div>
-  <div class="stat-box"><div class="stat-val">3</div><div class="stat-label">Sem taper</div></div>
-  <div class="stat-box" id="stat-done"><div class="stat-val" id="stat-done-val">0</div><div class="stat-label">Sesiones ✓</div></div>
+  <div class="stat-box"><div class="stat-val" id="stat-done-val">0</div><div class="stat-label">Sesiones ✓</div></div>
+  <div class="stat-box"><div class="stat-val" id="stat-km-val">0</div><div class="stat-label">Km corridos</div></div>
 </div>
 
 <div class="filter-bar">
@@ -485,10 +473,6 @@ function getState(){return JSON.parse(localStorage.getItem('pde_plan')||'{}');}
 function saveState(s){localStorage.setItem('pde_plan',JSON.stringify(s));}
 function sessKey(wn,di){return `w${wn}_d${di}`;}
 
-function countDone(){
-  const s=getState();
-  return Object.values(s).filter(v=>v&&v.status==='done').length;
-}
 
 function buildCard(w,isCurrent,isPast){
   const i=w.n-1;
@@ -607,26 +591,67 @@ function render(){
     gc.appendChild(sec);
   });
 
-  // update done stat
-  document.getElementById('stat-done-val').textContent=countDone();
+  // update stats
+  updateStats();
+
+  // weeks remaining
+  const race=new Date(2026,8,6);
+  const today=new Date();
+  const msLeft=race-today;
+  const weeksLeft=Math.max(0,Math.ceil(msLeft/(7*24*3600*1000)));
+  const wlEl=document.getElementById('weeks-left');
+  if(wlEl) wlEl.textContent=weeksLeft>0?`${weeksLeft} sem`:'¡Hoy!';
+}
+
+function updateStats(){
+  const s=getState();
+  let sessions=0, km=0;
+  Object.entries(s).forEach(([key,val])=>{
+    if(val&&val.status==='done'){
+      sessions++;
+      if(val.km) km+=parseFloat(val.km)||0;
+    }
+  });
+  document.getElementById('stat-done-val').textContent=sessions;
+  document.getElementById('stat-km-val').textContent=km%1===0?km:km.toFixed(1);
 }
 
 function markSession(key,status,wn){
   const s=getState();
   if(s[key]&&s[key].status===status){
-    // toggle off
     delete s[key];
+    saveState(s);
+    render();
+    return;
+  }
+  // Si es run (tiene km), pedir confirmación con km
+  const sessKm=getSessionKm(key);
+  if(status==='done'&&sessKm){
+    s[key]={status,note:s[key]?.note||'',km:sessKm};
+    saveState(s);
+    const noteEl=document.getElementById('note-'+key);
+    if(noteEl) noteEl.classList.remove('visible');
+    render();
   } else {
-    s[key]={status,note:s[key]?.note||''};
+    s[key]={status,note:s[key]?.note||'',km:0};
+    saveState(s);
+    const noteEl=document.getElementById('note-'+key);
+    if(noteEl) noteEl.classList.toggle('visible',status==='missed');
+    render();
   }
-  saveState(s);
-  // show/hide note input
-  const noteEl=document.getElementById('note-'+key);
-  if(noteEl){
-    const st=getState()[key];
-    noteEl.classList.toggle('visible',!!(st&&st.status==='missed'));
-  }
-  render();
+}
+
+// Map session key to its km value from WEEKS data
+function getSessionKm(key){
+  const match=key.match(/^w(\d+)_d(\d+)$/);
+  if(!match)return 0;
+  const wn=parseInt(match[1]),di=parseInt(match[2]);
+  const w=WEEKS.find(x=>x.n===wn);
+  if(!w)return 0;
+  const sess=w.sess.find(s=>s.d===di);
+  if(!sess||!sess.km)return 0;
+  // Parse "15 km" → 15
+  return parseFloat(sess.km)||0;
 }
 
 function saveNote(key){
