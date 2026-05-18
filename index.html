@@ -1720,7 +1720,7 @@ function onFoodInput(id){
 }
 
 function saveMeals(){
-  const rows=document.querySelectorAll('#meals-rows .meal-row');
+  const rows=document.querySelectorAll('#meals-rows .meal-row-mobile');
   if(!rows.length)return;
   const meals=[];
   let totalKcal=0,totalProt=0,totalFat=0,totalFibra=0,count=0;
@@ -1929,7 +1929,7 @@ function renderNutri(){
       mealRowCount++;
       const id=mealRowCount;
       const row=document.createElement('div');
-      row.className='meal-row';row.id='meal-row-'+id;
+      row.className='meal-row-mobile';row.id='meal-row-'+id;
       const mnames=['Desayuno','Almuerzo','Merienda','Cena','Snack'];
       const opts=mnames.map(n=>`<option${n===m.name?' selected':''}>${n}</option>`).join('');
       row.innerHTML=`
