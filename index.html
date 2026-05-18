@@ -1614,12 +1614,14 @@ function saveNutriData(nd){
 }
 
 function saveNutriDay(){
+  // If meals are present and totals not manually set, recalc first
+  recalcMealTotals();
   const kcal=parseFloat(document.getElementById('ni-kcal').value)||0;
   const prot=parseFloat(document.getElementById('ni-prot').value)||0;
   const carb=parseFloat(document.getElementById('ni-carb').value)||0;
   const fat=parseFloat(document.getElementById('ni-fat').value)||0;
   const fibra=parseFloat(document.getElementById('ni-fibra').value)||0;
-  if(!kcal){alert('Ingresá al menos las calorías');return;}
+  if(!kcal){alert('Ingresá al menos las calorías o cargá las comidas primero');return;}
   const nd=getNutriData();
   const key=nutriDateKey(nutriCurrentDate);
   if(!nd[key])nd[key]={meals:[]};
@@ -1654,7 +1656,7 @@ function addMealRow(prefill){
     <div class="meal-field-group" style="grid-column:span 1">
       <label class="meal-field-label">Descripción</label>
       <input class="meal-input" id="m-desc-${id}" list="${dlId}" placeholder="Ej: café con leche" value="${p.desc||''}"
-        oninput="onFoodInput('${id}')">
+        oninput="onFoodInput('${id}')" onchange="onFoodInput('${id}')">
     </div>
     <div class="meal-field-group">
       <label class="meal-field-label">Kcal</label>
@@ -1678,6 +1680,7 @@ function addMealRow(prefill){
     </div>
     <button class="meal-del" onclick="document.getElementById('meal-row-${id}').remove()" style="align-self:flex-end">✕</button>`;
   document.getElementById('meals-rows').appendChild(row);
+  if(prefill&&prefill.kcal) recalcMealTotals();
 }
 
 // Food autocomplete from history
@@ -2356,12 +2359,32 @@ function exportToPDF(){
   setTimeout(function(){win.print();},800);
 }
 
+function preloadFoodHistory(){
+  const s=getState();
+  const preloaded=[
+    {desc:'Café con leche, 2 galletas de arroz con palta y queso',
+     kcal:265,prot:15,carb:26,fat:12,fibra:3},
+    {desc:'3 empanadas Pagnifique (2 carne 1 pollo), barra cereal mix original',
+     kcal:704,prot:31,carb:92,fat:27,fibra:4},
+    {desc:'Snack molino platano',
+     kcal:204,prot:2,carb:42,fat:3,fibra:2},
+  ];
+  if(!s._foodHistory)s._foodHistory=[];
+  preloaded.forEach(food=>{
+    const idx=s._foodHistory.findIndex(f=>f.desc.toLowerCase()===food.desc.toLowerCase());
+    if(idx>=0) s._foodHistory[idx]=food;
+    else s._foodHistory.push(food);
+  });
+  saveState(s);
+}
+
 // ===== INIT =====
 renderGym(GYM_DAY1,'gym-day1');
 renderGym(GYM_DAY2,'gym-day2');
 renderGym(GYM_FULL,'gym-full');
 render();
 initNotifBtn();
+preloadFoodHistory();
 
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
