@@ -486,11 +486,6 @@ svg.chart{width:100%;overflow:visible;}
 <div class="page" id="page-nutri">
 <div class="nutri-page">
 
-  <!-- Inline config notice -->
-  <div style="margin-bottom:14px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-family:DM Mono,monospace;font-size:10px;color:var(--muted);line-height:1.6;">
-    ⚙️ Los targets se calculan en <strong style="color:var(--accent)">Stats → Calculadora calórica</strong>.<br>
-    Si no la completaste aún, usamos valores por defecto (2000 kcal, 30% prot, 25% grasa, 25g fibra).
-  </div>
 
   <div class="nutri-section">
     <div class="nutri-title">Registro diario</div>
@@ -560,15 +555,6 @@ svg.chart{width:100%;overflow:visible;}
         <div class="legend-item-small"><div class="legend-dot-small" style="background:var(--border);border:1px dashed var(--muted)"></div>Target</div>
       </div>
       <div id="nutri-weekly-chart"><div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-align:center;padding:20px;">Registrá al menos 3 días para ver la gráfica</div></div>
-    </div>
-  </div>
-
-  <!-- Food history management -->
-  <div class="nutri-section">
-    <div class="nutri-title">Historial de alimentos</div>
-    <div class="nutri-sub">Autocompletado · borrar en caso de error</div>
-    <div class="food-history-list" id="food-history-list">
-      <div style="font-family:DM Mono,monospace;font-size:11px;color:var(--muted);text-align:center;padding:10px;">Sin alimentos guardados aún</div>
     </div>
   </div>
 
@@ -2418,6 +2404,7 @@ function exportToPDF(){
 
 function preloadFoodHistory(){
   const s=getState();
+  // These 3 foods are always kept up to date — overwrites any stale version
   const preloaded=[
     {desc:'Café con leche, 2 galletas de arroz con palta y queso',
      kcal:265,prot:15,carb:26,fat:12,fibra:3},
@@ -2429,10 +2416,9 @@ function preloadFoodHistory(){
   if(!s._foodHistory)s._foodHistory=[];
   preloaded.forEach(food=>{
     const idx=s._foodHistory.findIndex(f=>f.desc.toLowerCase()===food.desc.toLowerCase());
-    if(idx>=0) s._foodHistory[idx]=food; // always overwrite with latest macros
-    else s._foodHistory.push(food);
+    if(idx>=0) s._foodHistory[idx]=food;
+    else s._foodHistory.unshift(food); // add at top
   });
-  // Always save — no flag check so updates always apply
   saveState(s);
 }
 
