@@ -250,13 +250,22 @@ svg.chart{width:100%;overflow:visible;}
 .meals-toggle{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--accent2);cursor:pointer;text-decoration:underline;margin-bottom:10px;display:block;text-transform:uppercase;}
 .meals-section{display:none;margin-top:10px;}
 .meals-section.open{display:block;}
-.meal-row{display:grid;grid-template-columns:80px 1fr 60px 60px 60px 60px 36px;gap:6px;align-items:center;margin-bottom:6px;}
+.meal-row{display:grid;grid-template-columns:80px 1fr 52px 52px 52px 52px 30px;gap:4px;align-items:center;margin-bottom:6px;}
+@media(max-width:480px){
+  .meal-row{grid-template-columns:1fr 1fr;gap:4px;}
+  .meal-row>*:nth-child(1){grid-column:1/2;}
+  .meal-row>*:nth-child(2){grid-column:2/3;}
+  .meal-row>*:nth-child(3),.meal-row>*:nth-child(4),.meal-row>*:nth-child(5),.meal-row>*:nth-child(6){grid-column:auto;}
+  .meal-row>*:nth-child(7){grid-column:2/3;justify-self:end;}
+  .meal-headers{display:none;}
+  .meal-input{font-size:12px !important;padding:6px 8px !important;}
+}
 .meal-name{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;}
 .meal-input{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:5px 7px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text);outline:none;width:100%;}
 .meal-input:focus{border-color:var(--accent);}
 .meal-del{background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;font-size:12px;padding:4px 8px;}
 .meal-del:hover{color:var(--fail);border-color:var(--fail);}
-.meal-headers{display:grid;grid-template-columns:80px 1fr 60px 60px 60px 60px 36px;gap:6px;margin-bottom:4px;}
+.meal-headers{display:grid;grid-template-columns:80px 1fr 52px 52px 52px 52px 30px;gap:4px;margin-bottom:4px;}
 .meal-hdr{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;text-align:center;}
 .meal-hdr:first-child{text-align:left;}
 
@@ -506,6 +515,12 @@ svg.chart{width:100%;overflow:visible;}
 <div class="page" id="page-nutri">
 <div class="nutri-page">
 
+  <!-- Inline config notice -->
+  <div style="margin-bottom:14px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-family:DM Mono,monospace;font-size:10px;color:var(--muted);line-height:1.6;">
+    ⚙️ Los targets se calculan en <strong style="color:var(--accent)">Stats → Calculadora calórica</strong>.<br>
+    Si no la completaste aún, usamos valores por defecto (2000 kcal, 30% prot, 25% grasa, 25g fibra).
+  </div>
+
   <div class="nutri-section">
     <div class="nutri-title">Registro diario</div>
     <div class="nutri-sub">Calorías · Proteína · Grasa · Fibra</div>
@@ -548,9 +563,9 @@ svg.chart{width:100%;overflow:visible;}
         <div class="meal-hdr">Comida</div>
         <div class="meal-hdr">Descripción</div>
         <div class="meal-hdr">kcal</div>
-        <div class="meal-hdr">Prot %</div>
-        <div class="meal-hdr">Grasa %</div>
-        <div class="meal-hdr">Fibra g</div>
+        <div class="meal-hdr">Prot%</div>
+        <div class="meal-hdr">Gras%</div>
+        <div class="meal-hdr">Fibra</div>
         <div class="meal-hdr"></div>
       </div>
       <div id="meals-rows"></div>
@@ -1695,23 +1710,61 @@ function saveMeals(){
   renderNutri();
 }
 
-function getTarget(){
-  // Get from saved calc inputs
+function getTarget(dateStr){
+  // dateStr optional — if provided, checks if it's a run day and adds bonus
   const s=getState();
   const c=s._calcInputs;
-  if(!c)return{kcal:2000,prot:30,fat:25,fibra:25};
-  const bmr=Math.round(10*c.peso+6.25*(c.altura||168)-5*(c.edad||29)+5);
-  const tdee=Math.round(bmr*(c.actFactor||1.375));
-  const runExtra=Math.round((3*estimateRunCalories(c.peso,12,6))/7);
-  const deficit=Math.round((c.objetivo||0.5)*7700/7);
-  const kcal=tdee+runExtra-deficit;
-  return{kcal,prot:30,fat:25,fibra:25};
+  const peso=c?.peso||72;
+  const altura=c?.altura||168;
+  const edad=c?.edad||29;
+  const actFactor=c?.actFactor||1.375;
+  const objetivo=c?.objetivo||0.5;
+  const bmr=Math.round(10*peso+6.25*altura-5*edad+5);
+  const tdee=Math.round(bmr*actFactor);
+  const runWeekly=Math.round((3*estimateRunCalories(peso,12,6))/7);
+  const deficit=Math.round(objetivo*7700/7);
+  let kcal=tdee+runWeekly-deficit;
+
+  // Run day bonus: check if dateStr has a planned run session
+  let runBonus=0;
+  let runDayDesc='';
+  if(dateStr){
+    const target=new Date(dateStr);target.setHours(0,0,0,0);
+    for(const w of WEEKS){
+      const days=weekDays(w.n-1);
+      for(const sess of w.sess){
+        if(!sess.isRun)continue;
+        const d=new Date(days[sess.d]);d.setHours(0,0,0,0);
+        if(d.getTime()===target.getTime()){
+          // Estimate bonus from planned km
+          const km=parseFloat(sess.km)||10;
+          runBonus=estimateRunCalories(peso,km,6);
+          runDayDesc=sess.desc;
+          break;
+        }
+      }
+      if(runBonus)break;
+    }
+    if(runBonus) kcal=kcal+runBonus; // add on top of daily average
+  }
+
+  return{kcal:Math.round(kcal),prot:30,fat:25,fibra:25,runBonus,runDayDesc};
 }
 
-function renderNutriDaySummary(dayData, target){
+function renderNutriDaySummary(dayData, target, dateStr){
   const el=document.getElementById('nutri-day-summary');
+
+  // Show run day banner if applicable
+  let runBanner='';
+  if(target.runBonus>0){
+    runBanner=`<div style="display:flex;align-items:center;gap:6px;padding:6px 10px;margin-bottom:10px;background:rgba(232,255,71,.06);border:1px solid rgba(232,255,71,.15);border-radius:5px;">
+      <span style="font-size:14px">🏃</span>
+      <span style="font-family:DM Mono,monospace;font-size:10px;color:var(--accent);">DÍA DE RUNNING — +${target.runBonus} kcal extra incluidas en el target</span>
+    </div>`;
+  }
+
   if(!dayData||!dayData.kcal){
-    el.innerHTML='<div style="font-family:DM Mono,monospace;font-size:11px;color:var(--muted);text-align:center;padding:10px;">Sin datos para este día</div>';
+    el.innerHTML=runBanner+'<div style="font-family:DM Mono,monospace;font-size:11px;color:var(--muted);text-align:center;padding:10px;">Sin datos para este día</div>';
     return;
   }
   const rows=[
@@ -1810,7 +1863,7 @@ function renderNutri(){
   document.getElementById('nutri-date-label').textContent=nutriFormatLabel(nutriCurrentDate);
   const nd=getNutriData();
   const dayData=nd[key]||null;
-  const target=getTarget();
+  const target=getTarget(key);
 
   // Fill inputs with saved data
   document.getElementById('ni-kcal').value=dayData?.kcal||'';
@@ -1842,7 +1895,7 @@ function renderNutri(){
     });
   }
 
-  renderNutriDaySummary(dayData,target);
+  renderNutriDaySummary(dayData,target,key);
   renderNutriWeeklyChart(nd,target);
   renderNutriAvgs(nd);
 }
