@@ -76,6 +76,14 @@ main{padding:16px 20px 80px;}
 .week-card.taper{border-color:rgba(255,107,71,.25);}
 .week-card.peak{border-color:rgba(232,255,71,.4);}
 .week-card.past{opacity:.5;}
+.week-card.compact .sessions{display:none;}
+.week-card.compact .run-stats{display:none!important;}
+.week-card.compact .rpe-row{display:none!important;}
+.week-card.compact .session-check{display:none;}
+.week-card.compact .gym-link{display:none;}
+.week-card.compact .card-note{display:none;}
+.week-card.compact:hover .sessions{display:flex;}
+.week-card.compact:hover .session-check{display:flex;}
 .prg{height:3px;background:var(--border);}
 .prg-fill{height:100%;background:var(--accent);}
 .week-card.taper .prg-fill{background:var(--taper);}
@@ -345,6 +353,13 @@ svg.chart{width:100%;overflow:visible;}
   <div class="header-meta">
     <div class="meta-item"><span class="meta-label">Carrera</span><span class="meta-value">6 Sep 2026</span></div>
     <div class="meta-item"><span class="meta-label">Semanas restantes</span><span class="meta-value" id="weeks-left">—</span></div>
+    <div class="meta-item">
+      <span class="meta-label">Recordatorios</span>
+      <button id="notif-btn" onclick="toggleNotifications()"
+        style="background:rgba(232,255,71,.08);border:1px solid rgba(232,255,71,.2);border-radius:4px;padding:3px 10px;font-family:DM Mono,monospace;font-size:10px;letter-spacing:1px;color:var(--accent);cursor:pointer;text-transform:uppercase;">
+        🔔 Activar
+      </button>
+    </div>
   </div>
 </header>
 <div class="plan-progress">
@@ -401,6 +416,11 @@ svg.chart{width:100%;overflow:visible;}
 <div class="page" id="page-stats">
 <div class="stats-page">
 
+  <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+    <button onclick="exportToCSV()" style="flex:1;padding:9px 12px;background:rgba(71,196,255,.08);border:1px solid rgba(71,196,255,.25);border-radius:6px;font-family:DM Mono,monospace;font-size:10px;letter-spacing:2px;color:var(--accent2);cursor:pointer;text-transform:uppercase;">📊 Exportar CSV</button>
+    <button onclick="exportToPDF()" style="flex:1;padding:9px 12px;background:rgba(232,255,71,.08);border:1px solid rgba(232,255,71,.25);border-radius:6px;font-family:DM Mono,monospace;font-size:10px;letter-spacing:2px;color:var(--accent);cursor:pointer;text-transform:uppercase;">📄 Exportar PDF</button>
+  </div>
+
   <div class="stats-section">
     <div class="stats-section-title">Importar actividad</div>
     <div class="stats-section-sub">GPX o FIT desde Zepp / Garmin / Strava</div>
@@ -428,67 +448,6 @@ svg.chart{width:100%;overflow:visible;}
     </div>
     <div class="mini-chart" id="weight-chart">
       <div class="chart-empty">Sin datos aún — registrá tu primer peso</div>
-    </div>
-  </div>
-
-  <div class="stats-section">
-    <div class="stats-section-title">Calculadora calórica</div>
-    <div class="stats-section-sub">TDEE · déficit · gasto por corrida</div>
-    <div class="cal-calc">
-      <div class="calc-grid">
-        <div class="calc-field">
-          <span class="calc-label">Peso (kg)</span>
-          <input class="calc-input" id="cc-peso" type="number" step="0.5" placeholder="72" value="72">
-        </div>
-        <div class="calc-field">
-          <span class="calc-label">Altura (cm)</span>
-          <input class="calc-input" id="cc-altura" type="number" step="1" placeholder="168" value="168">
-        </div>
-        <div class="calc-field">
-          <span class="calc-label">Edad</span>
-          <input class="calc-input" id="cc-edad" type="number" step="1" placeholder="29" value="29">
-        </div>
-        <div class="calc-field">
-          <span class="calc-label">Objetivo</span>
-          <select class="calc-select" id="cc-objetivo">
-            <option value="0.5">Bajar 0.5 kg/sem</option>
-            <option value="0.25">Bajar 0.25 kg/sem</option>
-            <option value="0">Mantener peso</option>
-          </select>
-        </div>
-      </div>
-      <div class="calc-field" style="margin-bottom:14px;">
-        <span class="calc-label">Nivel de actividad (sin contar este plan)</span>
-        <select class="calc-select" id="cc-actividad">
-          <option value="1.2">Sedentario — trabajo de escritorio</option>
-          <option value="1.375" selected>Levemente activo — camino, trabajo de campo</option>
-          <option value="1.55">Moderadamente activo — actividad física regular</option>
-        </select>
-      </div>
-      <button class="calc-btn" onclick="calcTDEE()">Calcular</button>
-      <div class="calc-results" id="cc-results">
-        <div class="calc-result-row">
-          <span class="calc-result-label">Metabolismo basal (BMR)</span>
-          <span class="calc-result-val blue" id="cc-bmr">—</span>
-        </div>
-        <div class="calc-result-row">
-          <span class="calc-result-label">Gasto total diario (TDEE)</span>
-          <span class="calc-result-val" id="cc-tdee">—</span>
-        </div>
-        <div class="calc-result-row highlight">
-          <span class="calc-result-label">Target calórico diario</span>
-          <span class="calc-result-val green" id="cc-target">—</span>
-        </div>
-        <div class="calc-result-row">
-          <span class="calc-result-label">Déficit diario</span>
-          <span class="calc-result-val" id="cc-deficit">—</span>
-        </div>
-        <div class="calc-result-row">
-          <span class="calc-result-label">Calorías quemadas última corrida</span>
-          <span class="calc-result-val blue" id="cc-lastrun">—</span>
-        </div>
-        <div class="calc-note" id="cc-note"></div>
-      </div>
     </div>
   </div>
 
@@ -534,12 +493,12 @@ svg.chart{width:100%;overflow:visible;}
           <input class="nutri-input" id="ni-kcal" type="number">
         </div>
         <div class="nutri-field">
-          <span class="nutri-label">Proteína (%)</span>
-          <input class="nutri-input" id="ni-prot" type="number" min="0" max="100">
+          <span class="nutri-label">Proteína (g)</span>
+          <input class="nutri-input" id="ni-prot" type="number" min="0">
         </div>
         <div class="nutri-field">
-          <span class="nutri-label">Grasa (%)</span>
-          <input class="nutri-input" id="ni-fat" type="number" min="0" max="100">
+          <span class="nutri-label">Grasa (g)</span>
+          <input class="nutri-input" id="ni-fat" type="number" min="0">
         </div>
         <div class="nutri-field">
           <span class="nutri-label">Fibra (g)</span>
@@ -972,7 +931,7 @@ function buildCard(w,isCurrent,isPast){
     return `<div class="wp-pip ${st.status==='done'?'done':st.status==='missed'?'missed':''}"></div>`;
   }).join('');
 
-  const cardCls=['week-card',w.phase==='taper'?'taper':'',w.n===11?'peak':'',isPast?'past':''].filter(Boolean).join(' ');
+  const cardCls=['week-card',w.phase==='taper'?'taper':'',w.n===11?'peak':'',isPast?'past':'',isPast?'compact':''].filter(Boolean).join(' ');
   const noteHtml=w.note?`<div class="card-note">⚡ ${w.note}</div>`:'';
 
   return `<div class="${cardCls}">
@@ -989,6 +948,12 @@ function buildCard(w,isCurrent,isPast){
     <div class="sessions">${sess}</div>
     ${noteHtml}
     <div class="week-prog"><span class="wp-label">PROGRESO</span><div class="wp-pips">${pips}</div></div>
+    ${!isPast?`<div style="padding:0 12px 10px;">
+      <textarea id="wnote-${w.n}" placeholder="Nota de la semana (cómo te sentiste, dolor, clima...)"
+        onblur="saveWeekNote(${w.n},this.value)"
+        style="width:100%;background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:4px;padding:6px 8px;font-family:DM Mono,monospace;font-size:10px;color:var(--text);outline:none;resize:none;height:48px;line-height:1.5;"
+        >${state['_wnote_'+w.n]||''}</textarea>
+    </div>`:''}
   </div>`;
 }
 
@@ -1035,6 +1000,12 @@ function render(){
   const wl=Math.max(0,Math.ceil((race-TODAY)/(7*24*3600*1000)));
   const el=document.getElementById('weeks-left');
   if(el)el.textContent=wl>0?`${wl} sem`:'¡Hoy!';
+}
+
+function saveWeekNote(wn,val){
+  const s=getState();
+  s['_wnote_'+wn]=val;
+  saveState(s);
 }
 
 function toggleHistory(){
@@ -1153,12 +1124,22 @@ function renderStats(){
 
   // RPE color
   const rpeC=['','#4ade80','#86efac','#86efac','#fbbf24','#fbbf24','#fb923c','#f87171','#ef4444','#dc2626','#991b1b'];
+  // Tag session type for context
+  const sessTypeLabel=(desc)=>{
+    if(!desc)return'';
+    if(desc.includes('Pasadas')||desc.includes('pasadas'))return'⚡';
+    if(desc.includes('Tempo')||desc.includes('tempo'))return'🔥';
+    if(desc.includes('MÁXIMO')||desc.includes('largo'))return'🏃';
+    if(desc.includes('corto')||desc.includes('breve'))return'🔄';
+    if(desc.includes('MARATÓN'))return'🏁';
+    return'▸';
+  };
   rht.innerHTML=`<table class="run-table">
-    <tr><th>Sesión</th><th>Dist</th><th>Tiempo</th><th>Ritmo</th><th>RPE</th></tr>
+    <tr><th></th><th>Sesión</th><th>Dist</th><th>Ritmo</th><th>RPE</th></tr>
     ${runs.map(r=>`<tr>
-      <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.desc}</td>
+      <td style="font-size:14px;text-align:center;">${sessTypeLabel(r.desc)}</td>
+      <td style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;">${r.desc}</td>
       <td>${r.km?r.km+' km':'-'}</td>
-      <td>${r.time||'-'}</td>
       <td class="td-pace">${r.pace||'-'}</td>
       <td class="td-rpe">${r.rpe?`<span class="rpe-dot" style="background:${rpeC[r.rpe]};color:#000">${r.rpe}</span>`:'-'}</td>
     </tr>`).join('')}
@@ -1523,12 +1504,17 @@ function calcTDEE(){
   const macroP = Math.round(target * 0.30 / 4);
   const macroC = Math.round(target * 0.45 / 4);
   const macroF = Math.round(target * 0.25 / 9);
+  // Recalc with grams
+  const protG2=Math.round(target*0.30/4);
+  const fatG2=Math.round(target*0.25/9);
+  const carbG2=Math.round(target*0.45/4);
   document.getElementById('cc-note').innerHTML =
-    `<strong style="color:var(--text)">Distribución sugerida de macros:</strong><br>
-    🥩 Proteína: ${macroP}g/día (30%) — clave para mantener músculo en déficit<br>
-    🌾 Carbohidratos: ${macroC}g/día (45%) — combustible para las corridas<br>
-    🥑 Grasas: ${macroF}g/día (25%)<br><br>
-    <span style="color:var(--muted)">Los días de fondo largo y pasadas podés sumar 200–300 kcal extra al target.</span>`;
+    `<strong style="color:var(--text)">Distribución sugerida de macros (gramos):</strong><br>
+    🥩 Proteína: <strong style="color:#4ade80">${protG2}g/día</strong> — clave para mantener músculo<br>
+    🌾 Carbohidratos: <strong style="color:var(--accent)">${carbG2}g/día</strong> — combustible para las corridas<br>
+    🥑 Grasas: <strong style="color:#fb923c">${fatG2}g/día</strong><br>
+    💧 Fibra: <strong style="color:var(--accent2)">25g/día</strong><br><br>
+    <span style="color:var(--muted)">Los días de fondo largo y pasadas sumá 200–400 kcal extra al target.</span>`;
 
   document.getElementById('cc-results').classList.add('visible');
 
@@ -1667,19 +1653,19 @@ function addMealRow(prefill){
     </div>
     <div class="meal-field-group">
       <label class="meal-field-label">Kcal</label>
-      <input class="meal-input" id="m-kcal-${id}" type="number" value="${p.kcal||''}">
+      <input class="meal-input" id="m-kcal-${id}" type="number" value="${p.kcal||''}" oninput="recalcMealTotals()">
     </div>
     <div class="meal-field-group">
-      <label class="meal-field-label">Prot %</label>
-      <input class="meal-input" id="m-prot-${id}" type="number" value="${p.prot||''}">
+      <label class="meal-field-label">Prot g</label>
+      <input class="meal-input" id="m-prot-${id}" type="number" value="${p.prot||''}" oninput="recalcMealTotals()">
     </div>
     <div class="meal-field-group">
-      <label class="meal-field-label">Grasa %</label>
-      <input class="meal-input" id="m-fat-${id}" type="number" value="${p.fat||''}">
+      <label class="meal-field-label">Grasa g</label>
+      <input class="meal-input" id="m-fat-${id}" type="number" value="${p.fat||''}" oninput="recalcMealTotals()">
     </div>
     <div class="meal-field-group">
       <label class="meal-field-label">Fibra g</label>
-      <input class="meal-input" id="m-fibra-${id}" type="number" value="${p.fibra||''}">
+      <input class="meal-input" id="m-fibra-${id}" type="number" value="${p.fibra||''}" oninput="recalcMealTotals()">
     </div>
     <button class="meal-del" onclick="document.getElementById('meal-row-${id}').remove()" style="align-self:flex-end">✕</button>`;
   document.getElementById('meals-rows').appendChild(row);
@@ -1707,7 +1693,6 @@ function onFoodInput(id){
   const foods=getFoodHistory();
   const match=foods.find(f=>f.desc.toLowerCase()===desc.toLowerCase());
   if(match){
-    // Auto-fill macros from saved food
     const kcalEl=document.getElementById('m-kcal-'+id);
     const protEl=document.getElementById('m-prot-'+id);
     const fatEl=document.getElementById('m-fat-'+id);
@@ -1716,7 +1701,36 @@ function onFoodInput(id){
     if(protEl&&!protEl.value)protEl.value=match.prot||'';
     if(fatEl&&!fatEl.value)fatEl.value=match.fat||'';
     if(fibraEl&&!fibraEl.value)fibraEl.value=match.fibra||'';
+    recalcMealTotals();
   }
+}
+
+function recalcMealTotals(){
+  // Sum all meal rows and auto-fill the day totals
+  const rows=document.querySelectorAll('#meals-rows .meal-row-mobile');
+  let totalKcal=0,totalProt=0,totalFat=0,totalFibra=0;
+  rows.forEach(r=>{
+    const id=r.id.replace('meal-row-','');
+    totalKcal+=parseFloat(document.getElementById('m-kcal-'+id)?.value)||0;
+    totalProt+=parseFloat(document.getElementById('m-prot-'+id)?.value)||0;
+    totalFat+=parseFloat(document.getElementById('m-fat-'+id)?.value)||0;
+    totalFibra+=parseFloat(document.getElementById('m-fibra-'+id)?.value)||0;
+  });
+  if(totalKcal>0){
+    document.getElementById('ni-kcal').value=totalKcal;
+    document.getElementById('ni-prot').value=Math.round(totalProt);
+    document.getElementById('ni-fat').value=Math.round(totalFat);
+    document.getElementById('ni-fibra').value=Math.round(totalFibra);
+    // Live preview of day summary
+    updateDaySummaryPreview(totalKcal,totalProt,totalFat,totalFibra);
+  }
+}
+
+function updateDaySummaryPreview(kcal,prot,fat,fibra){
+  const key=nutriDateKey(nutriCurrentDate);
+  const target=getTarget(key);
+  const preview={kcal,prot,fat,fibra};
+  renderNutriDaySummary(preview,target,key);
 }
 
 function saveMeals(){
@@ -1797,7 +1811,11 @@ function getTarget(dateStr){
     if(runBonus) kcal=kcal+runBonus; // add on top of daily average
   }
 
-  return{kcal:Math.round(kcal),prot:30,fat:25,fibra:25,runBonus,runDayDesc};
+  // Convert % targets to grams based on kcal target
+  const protG = Math.round(kcal * 0.30 / 4);   // 30% protein, 4 kcal/g
+  const fatG  = Math.round(kcal * 0.25 / 9);   // 25% fat, 9 kcal/g
+  const fibraG = 25;                             // 25g fiber standard recommendation
+  return{kcal:Math.round(kcal),prot:protG,fat:fatG,fibra:fibraG,runBonus,runDayDesc};
 }
 
 function renderNutriDaySummary(dayData, target, dateStr){
@@ -1818,8 +1836,8 @@ function renderNutriDaySummary(dayData, target, dateStr){
   }
   const rows=[
     {label:'Calorías',consumed:dayData.kcal,target:target.kcal,unit:'kcal',fill:'fill-kcal',color:'var(--accent)'},
-    {label:'Proteína',consumed:dayData.prot,target:target.prot,unit:'%',fill:'fill-prot',color:'#4ade80'},
-    {label:'Grasa',consumed:dayData.fat,target:target.fat,unit:'%',fill:'fill-fat',color:'#fb923c'},
+    {label:'Proteína',consumed:dayData.prot,target:target.prot,unit:'g',fill:'fill-prot',color:'#4ade80'},
+    {label:'Grasa',consumed:dayData.fat,target:target.fat,unit:'g',fill:'fill-fat',color:'#fb923c'},
     {label:'Fibra',consumed:dayData.fibra,target:target.fibra,unit:'g',fill:'fill-fibra',color:'var(--accent2)'},
   ];
   el.innerHTML=rows.map(r=>{
@@ -1902,8 +1920,8 @@ function renderNutriAvgs(nd){
   const kcalColor=Math.abs(avgKcal-target.kcal)<150?'var(--ok)':avgKcal>target.kcal?'var(--fail)':'var(--accent)';
   el.innerHTML=`
     <div class="avg-card"><div class="avg-val" style="color:${kcalColor}">${avgKcal}</div><div class="avg-label">kcal/día</div><div class="avg-sub">target: ${target.kcal} · ${vals.length} días</div></div>
-    <div class="avg-card"><div class="avg-val" style="color:#4ade80">${avgProt}%</div><div class="avg-label">Proteína</div><div class="avg-sub">target: ${target.prot}%</div></div>
-    <div class="avg-card"><div class="avg-val" style="color:#fb923c">${avgFat}%</div><div class="avg-label">Grasa</div><div class="avg-sub">target: ${target.fat}%</div></div>
+    <div class="avg-card"><div class="avg-val" style="color:#4ade80">${avgProt}g</div><div class="avg-label">Proteína</div><div class="avg-sub">target: ${target.prot}g</div></div>
+    <div class="avg-card"><div class="avg-val" style="color:#fb923c">${avgFat}g</div><div class="avg-label">Grasa</div><div class="avg-sub">target: ${target.fat}g</div></div>
     <div class="avg-card"><div class="avg-val" style="color:var(--accent2)">${avgFibra}g</div><div class="avg-label">Fibra</div><div class="avg-sub">target: ${target.fibra}g</div></div>`;
 }
 
@@ -1949,11 +1967,348 @@ function renderNutri(){
   renderNutriAvgs(nd);
 }
 
+// ===== PUSH NOTIFICATIONS =====
+async function toggleNotifications(){
+  if(!('Notification' in window)||!('serviceWorker' in navigator)){
+    alert('Tu navegador no soporta notificaciones push.');return;
+  }
+  if(Notification.permission==='granted'){
+    // Already granted — schedule
+    scheduleTrainingReminders();
+    document.getElementById('notif-btn').textContent='🔔 Activadas';
+    document.getElementById('notif-btn').style.background='rgba(74,222,128,.15)';
+    document.getElementById('notif-btn').style.borderColor='var(--ok)';
+    document.getElementById('notif-btn').style.color='var(--ok)';
+    return;
+  }
+  const perm=await Notification.requestPermission();
+  if(perm==='granted'){
+    scheduleTrainingReminders();
+    document.getElementById('notif-btn').textContent='🔔 Activadas';
+    document.getElementById('notif-btn').style.background='rgba(74,222,128,.15)';
+    document.getElementById('notif-btn').style.borderColor='var(--ok)';
+    document.getElementById('notif-btn').style.color='var(--ok)';
+    const s=getState();s._notifEnabled=true;saveState(s);
+    showTrainingNotifToday();
+  } else {
+    alert('Permiso denegado. Activá las notificaciones desde la configuración del navegador.');
+  }
+}
+
+function scheduleTrainingReminders(){
+  // Check every time the page loads if today has a session
+  showTrainingNotifToday();
+}
+
+function showTrainingNotifToday(){
+  if(Notification.permission!=='granted')return;
+  const todayKey=nutriDateKey(new Date());
+  const todayDate=new Date();todayDate.setHours(0,0,0,0);
+  // Find today's sessions
+  const sessions=[];
+  for(const w of WEEKS){
+    const days=weekDays(w.n-1);
+    for(const s of w.sess){
+      const d=new Date(days[s.d]);d.setHours(0,0,0,0);
+      if(d.getTime()===todayDate.getTime()) sessions.push(s);
+    }
+  }
+  if(!sessions.length)return;
+  // Check if already notified today
+  const st=getState();
+  if(st['_notifShown_'+todayKey])return;
+  st['_notifShown_'+todayKey]=true;saveState(st);
+
+  const desc=sessions.map(s=>s.desc).join(' · ');
+  const icons={'run-long':'🏃','run-short':'⚡','gym':'💪','race-day':'🏁'};
+  const icon=icons[sessions[0].cls]||'🏃';
+  setTimeout(()=>{
+    new Notification('RunPlan — Hoy entrenás 💪',{
+      body:`${icon} ${desc}`,
+      icon:'/Plan-entrenamiento/icon-192.png',
+      badge:'/Plan-entrenamiento/icon-192.png',
+      tag:'training-today',
+    });
+  },2000);
+}
+
+function initNotifBtn(){
+  const s=getState();
+  const btn=document.getElementById('notif-btn');
+  if(!btn)return;
+  if(s._notifEnabled&&Notification.permission==='granted'){
+    btn.textContent='🔔 Activadas';
+    btn.style.background='rgba(74,222,128,.15)';
+    btn.style.borderColor='var(--ok)';
+    btn.style.color='var(--ok)';
+    showTrainingNotifToday();
+  }
+}
+
+// ===== EXPORT =====
+function exportToCSV(){
+  const s=getState();
+  const rows=[['Tipo','Semana','Día','Descripción','Km planificados','Km reales','Tiempo','Ritmo','RPE','Estado']];
+
+  // Running sessions
+  WEEKS.forEach(w=>{
+    const days=weekDays(w.n-1);
+    w.sess.forEach(sess=>{
+      const key=sessKey(w.n,sess.d);
+      const st=s[key]||{};
+      const d=days[sess.d];
+      const dateStr=`${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
+      rows.push([
+        sess.isRun?'Running':'Gym',
+        w.n,
+        dateStr,
+        sess.desc,
+        sess.km||'',
+        st.distReal||'',
+        st.time||'',
+        st.pace||'',
+        st.rpe||'',
+        st.status==='done'?'Completado':st.status==='missed'?'No realizado':'Pendiente'
+      ]);
+    });
+  });
+
+  // Nutrition rows
+  const nd=s._nutri||{};
+  rows.push([]);
+  rows.push(['NUTRICIÓN','Fecha','Kcal','Proteína g','Grasa g','Fibra g','','','','']);
+  Object.entries(nd).sort().forEach(([date,d])=>{
+    if(d&&d.kcal) rows.push(['',date,d.kcal,d.prot||'',d.fat||'',d.fibra||'','','','','']);
+  });
+
+  // Weight rows
+  const weights=s._weights||[];
+  if(weights.length){
+    rows.push([]);
+    rows.push(['PESO','Fecha','Kg','','','','','','','']);
+    weights.forEach(w=>rows.push(['',w.date,w.kg,'','','','','','','']));
+  }
+
+    const csvLines=rows.map(function(r){return r.map(function(v){var s=String(v);return '"'+s.split('"').join('""')+'"';}).join(',');});
+  const csv=csvLines.join('\n');;
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='RunPlan_export.csv';
+  document.body.appendChild(a);a.click();
+  document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+
+function exportToPDF(){
+  const s=getState();
+  const nd=s._nutri||{};
+  const weights=s._weights||[];
+  const target=getTarget(null);
+
+  // ── Completed runs ──
+  const runs=[];
+  WEEKS.forEach(function(w){
+    var days=weekDays(w.n-1);
+    w.sess.filter(function(se){return se.isRun;}).forEach(function(sess){
+      var key=sessKey(w.n,sess.d);
+      var st=s[key]||{};
+      var d=days[sess.d];
+      runs.push({
+        date:d.getDate()+'/'+(d.getMonth()+1),
+        desc:sess.desc,
+        km:st.distReal||sess.km||'',
+        time:st.time||'—',
+        pace:st.pace||'—',
+        rpe:st.rpe||'—',
+        status:st.status||'pending'
+      });
+    });
+  });
+
+  // ── Training progress ──
+  var totalSessions=0;
+  WEEKS.forEach(function(w){w.sess.forEach(function(){totalSessions++;});});
+  var doneSessions=Object.values(s).filter(function(v){return v&&v.status==='done';}).length;
+  var missedSessions=Object.values(s).filter(function(v){return v&&v.status==='missed';}).length;
+  var completedPct=totalSessions>0?Math.round(doneSessions/totalSessions*100):0;
+  var totalKmDone=runs.filter(function(r){return r.status==='done';}).reduce(function(a,r){return a+(parseFloat(r.km)||0);},0);
+
+  // ── Nutrition averages ──
+  var nutriVals=Object.values(nd).filter(function(v){return v&&v.kcal;});
+  var avgKcal=nutriVals.length?Math.round(nutriVals.reduce(function(a,v){return a+(v.kcal||0);},0)/nutriVals.length):null;
+  var avgProt=nutriVals.length?Math.round(nutriVals.reduce(function(a,v){return a+(v.prot||0);},0)/nutriVals.length):null;
+  var avgFat=nutriVals.length?Math.round(nutriVals.reduce(function(a,v){return a+(v.fat||0);},0)/nutriVals.length):null;
+  var avgFibra=nutriVals.length?Math.round(nutriVals.reduce(function(a,v){return a+(v.fibra||0);},0)/nutriVals.length):null;
+
+  // ── Weight chart SVG ──
+  var weightChartSVG='';
+  if(weights.length>=2){
+    var kgs=weights.map(function(w){return w.kg;});
+    var minK=Math.min.apply(null,kgs)-1;
+    var maxK=Math.max.apply(null,kgs)+1;
+    var W=500,H=120,pad=30;
+    var xS=function(i){return pad+(i/(weights.length-1))*(W-pad*2);};
+    var yS=function(k){return H-pad-(k-minK)/(maxK-minK)*(H-pad*2);};
+    var pts=weights.map(function(w,i){return xS(i)+','+yS(w.kg);}).join(' ');
+    var firstKg=kgs[0],lastKg=kgs[kgs.length-1];
+    var diff=(lastKg-firstKg).toFixed(1);
+    var diffColor=parseFloat(diff)<=0?'#4ade80':'#f87171';
+    var dots=weights.map(function(w,i){
+      return '<circle cx="'+xS(i)+'" cy="'+yS(w.kg)+'" r="4" fill="#47c4ff"/>'+
+        '<text x="'+xS(i)+'" y="'+(yS(w.kg)-8)+'" text-anchor="middle" font-family="Arial" font-size="9" fill="#666">'+w.kg+'</text>';
+    }).join('');
+    var xLabels=weights.map(function(w,i){
+      return '<text x="'+xS(i)+'" y="'+(H-8)+'" text-anchor="middle" font-family="Arial" font-size="8" fill="#888">'+w.date.slice(5)+'</text>';
+    }).join('');
+    weightChartSVG='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;max-width:500px;display:block;margin:12px 0">'+
+      '<polyline points="'+pts+'" fill="none" stroke="#47c4ff" stroke-width="2.5" stroke-linejoin="round"/>'+
+      dots+xLabels+
+      '<text x="'+(W-pad+5)+'" y="'+(yS(target.kcal||2000)+4)+'" font-family="Arial" font-size="8" fill="#aaa">'+
+        (parseFloat(diff)<=0?'▼ ':'▲ ')+Math.abs(parseFloat(diff))+'kg'+
+      '</text></svg>';
+  }
+
+  // ── Progress ring SVG ──
+  var r2=54,circ=2*Math.PI*r2;
+  var dashArr=((completedPct/100)*circ).toFixed(1)+' '+circ.toFixed(1);
+  var progressRing='<svg width="140" height="140" viewBox="0 0 140 140">'+
+    '<circle cx="70" cy="70" r="'+r2+'" fill="none" stroke="#2a2a3a" stroke-width="10"/>'+
+    '<circle cx="70" cy="70" r="'+r2+'" fill="none" stroke="#e8ff47" stroke-width="10"'+
+      ' stroke-dasharray="'+dashArr+'" stroke-dashoffset="0"'+
+      ' transform="rotate(-90 70 70)" stroke-linecap="round"/>'+
+    '<text x="70" y="62" text-anchor="middle" font-family="Arial" font-size="26" font-weight="bold" fill="#e8ff47">'+completedPct+'%</text>'+
+    '<text x="70" y="80" text-anchor="middle" font-family="Arial" font-size="10" fill="#888">completado</text>'+
+    '<text x="70" y="96" text-anchor="middle" font-family="Arial" font-size="9" fill="#aaa">'+doneSessions+'/'+totalSessions+' sesiones</text>'+
+    '</svg>';
+
+  // ── Pace sparkline SVG ──
+  var paceRunsWithPace=runs.filter(function(r){return r.pace&&r.pace!=='—';});
+  var paceSVG='';
+  if(paceRunsWithPace.length>=2){
+    var paceVals=paceRunsWithPace.map(function(r){
+      var p=r.pace.split(':');return parseFloat(p[0])+(parseFloat(p[1]||0)/60);
+    });
+    var minP=Math.min.apply(null,paceVals)-0.2;
+    var maxP=Math.max.apply(null,paceVals)+0.2;
+    var PW=400,PH=80,ppad=20;
+    var pxS=function(i){return ppad+(i/(paceVals.length-1))*(PW-ppad*2);};
+    var pyS=function(p){return PH-ppad-(p-minP)/(maxP-minP)*(PH-ppad*2);};
+    var ppts=paceVals.map(function(p,i){return pxS(i)+','+pyS(p);}).join(' ');
+    var pDiff=paceVals[paceVals.length-1]-paceVals[0];
+    var pDiffColor=pDiff<=0?'#4ade80':'#f87171';
+    paceSVG='<p style="font-size:11px;color:#666;margin-bottom:4px;">Evolución de ritmo — '+(pDiff<=0?'▼ mejorando':'▲ subiendo')+' '+(Math.abs(pDiff)*60).toFixed(0)+'seg/km</p>'+
+      '<svg viewBox="0 0 '+PW+' '+PH+'" style="width:100%;max-width:400px;display:block">'+
+      '<polyline points="'+ppts+'" fill="none" stroke="'+pDiffColor+'" stroke-width="2" stroke-linejoin="round"/>'+
+      paceVals.map(function(p,i){return '<circle cx="'+pxS(i)+'" cy="'+pyS(p)+'" r="3" fill="'+pDiffColor+'"/>';}).join('')+
+      '</svg>';
+  }
+
+  // ── RPE color helper ──
+  var rpeColors=['','#4ade80','#86efac','#86efac','#fbbf24','#fbbf24','#fb923c','#f87171','#ef4444','#dc2626','#991b1b'];
+
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>RunPlan — Reporte</title><style>'+
+    'body{font-family:Arial,sans-serif;font-size:12px;color:#1a1a1a;margin:0;padding:0;background:#fff;}'+
+    '.cover{background:#0a0a0f;color:#fff;padding:40px 36px 32px;position:relative;overflow:hidden;}'+
+    '.cover::before{content:"21.1";font-size:180px;color:rgba(232,255,71,0.06);position:absolute;right:-10px;top:-20px;line-height:1;font-weight:900;}'+
+    '.cover h1{font-size:36px;font-weight:900;margin:0 0 4px;color:#e8ff47;letter-spacing:1px;}'+
+    '.cover h2{font-size:16px;font-weight:400;color:#aaa;margin:0 0 24px;}'+
+    '.cover-meta{display:flex;gap:32px;flex-wrap:wrap;}'+
+    '.cover-meta-item{display:flex;flex-direction:column;gap:2px;}'+
+    '.cover-meta-label{font-size:9px;letter-spacing:2px;color:#666;text-transform:uppercase;}'+
+    '.cover-meta-value{font-size:14px;font-weight:700;color:#e8e8f0;}'+
+    '.section{padding:24px 36px;border-bottom:3px solid #f0f0f0;}'+
+    '.section:last-child{border-bottom:none;}'+
+    'h3{font-size:18px;font-weight:900;margin:0 0 16px;color:#0a0a0f;letter-spacing:.5px;}'+
+    '.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}'+
+    '.grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}'+
+    '.kpi{background:#f8f8f8;border-radius:8px;padding:14px 16px;border-left:4px solid #e8ff47;}'+
+    '.kpi.green{border-left-color:#4ade80;}.kpi.blue{border-left-color:#47c4ff;}.kpi.orange{border-left-color:#fb923c;}.kpi.red{border-left-color:#f87171;}'+
+    '.kpi-val{font-size:28px;font-weight:900;color:#111;line-height:1;}'+
+    '.kpi-label{font-size:10px;color:#888;margin-top:3px;text-transform:uppercase;letter-spacing:1px;}'+
+    '.kpi-sub{font-size:10px;color:#aaa;margin-top:2px;}'+
+    'table{width:100%;border-collapse:collapse;font-size:11px;}'+
+    'th{background:#0a0a0f;color:#e8ff47;padding:7px 10px;text-align:left;font-size:10px;letter-spacing:1px;text-transform:uppercase;}'+
+    'td{padding:6px 10px;border-bottom:1px solid #f0f0f0;}'+
+    'tr:nth-child(even) td{background:#fafafa;}'+
+    '.done{color:#16a34a;font-weight:700;}.missed{color:#dc2626;}.pending{color:#9ca3af;}'+
+    '.progress-wrap{display:flex;align-items:center;gap:24px;margin-bottom:8px;}'+
+    '@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}'+
+    '</style></head><body>'+
+
+    // COVER
+    '<div class="cover">'+
+    '<h1>MEDIO MARATÓN</h1>'+
+    '<h2>Punta del Este · 6 Sep 2026 · RunPlan</h2>'+
+    '<div class="cover-meta">'+
+    '<div class="cover-meta-item"><span class="cover-meta-label">Exportado</span><span class="cover-meta-value">'+new Date().toLocaleDateString('es-UY')+'</span></div>'+
+    '<div class="cover-meta-item"><span class="cover-meta-label">Km corridos</span><span class="cover-meta-value">'+totalKmDone.toFixed(1)+' km</span></div>'+
+    '<div class="cover-meta-item"><span class="cover-meta-label">Sesiones</span><span class="cover-meta-value">'+doneSessions+' ✓ · '+missedSessions+' ✗</span></div>'+
+    (weights.length?'<div class="cover-meta-item"><span class="cover-meta-label">Último peso</span><span class="cover-meta-value">'+weights[weights.length-1].kg+' kg</span></div>':'')+
+    '</div></div>'+
+
+    // TRAINING PROGRESS
+    '<div class="section">'+
+    '<h3>📊 Progreso del plan</h3>'+
+    '<div class="progress-wrap">'+progressRing+
+    '<div class="grid-2" style="flex:1">'+
+    '<div class="kpi"><div class="kpi-val" style="color:#e8ff47">'+doneSessions+'</div><div class="kpi-label">Sesiones completadas</div></div>'+
+    '<div class="kpi red"><div class="kpi-val" style="color:#f87171">'+missedSessions+'</div><div class="kpi-label">Sesiones no realizadas</div></div>'+
+    '<div class="kpi blue"><div class="kpi-val" style="color:#47c4ff">'+totalKmDone.toFixed(1)+'</div><div class="kpi-label">Km corridos</div></div>'+
+    '<div class="kpi green"><div class="kpi-val" style="color:#4ade80">'+Math.round(totalKmDone/470*100)+'%</div><div class="kpi-label">Del volumen total</div><div class="kpi-sub">Meta: 470 km</div></div>'+
+    '</div></div></div>'+
+
+    // RUNS
+    '<div class="section">'+
+    '<h3>🏃 Historial de corridas</h3>'+
+    (paceSVG?'<div style="margin-bottom:16px;">'+paceSVG+'</div>':'')+
+    '<table><tr><th>Fecha</th><th>Sesión</th><th>Km</th><th>Tiempo</th><th>Ritmo</th><th>RPE</th><th>Estado</th></tr>'+
+    runs.map(function(r){
+      var rpeHtml=r.rpe&&r.rpe!=='—'?'<span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:'+rpeColors[r.rpe]+';color:#000;font-size:9px;font-weight:700;text-align:center;line-height:20px;">'+r.rpe+'</span>':'—';
+      return '<tr><td>'+r.date+'</td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+r.desc+'</td><td>'+r.km+'</td><td>'+r.time+'</td><td style="font-weight:700;color:#e8a800">'+r.pace+'</td><td style="text-align:center">'+rpeHtml+'</td><td class="'+r.status+'">'+(r.status==='done'?'✓ Completado':r.status==='missed'?'✗ No realizado':'Pendiente')+'</td></tr>';
+    }).join('')+
+    '</table></div>'+
+
+    // BODY CONDITION
+    (weights.length?
+    '<div class="section">'+
+    '<h3>⚖️ Condición corporal</h3>'+
+    '<div class="grid-4" style="margin-bottom:16px;">'+
+    '<div class="kpi blue"><div class="kpi-val" style="color:#47c4ff">'+weights[0].kg+'</div><div class="kpi-label">Peso inicial</div><div class="kpi-sub">'+weights[0].date+'</div></div>'+
+    '<div class="kpi blue"><div class="kpi-val" style="color:#47c4ff">'+weights[weights.length-1].kg+'</div><div class="kpi-label">Peso actual</div><div class="kpi-sub">'+weights[weights.length-1].date+'</div></div>'+
+    '<div class="kpi '+(parseFloat((weights[weights.length-1].kg-weights[0].kg).toFixed(1))<=0?'green':'red')+'">'+
+    '<div class="kpi-val" style="color:'+(parseFloat((weights[weights.length-1].kg-weights[0].kg).toFixed(1))<=0?'#4ade80':'#f87171')+'">'+
+    (parseFloat((weights[weights.length-1].kg-weights[0].kg).toFixed(1))<=0?'▼ ':'▲ ')+Math.abs(weights[weights.length-1].kg-weights[0].kg).toFixed(1)+'</div>'+
+    '<div class="kpi-label">Variación kg</div></div>'+
+    '<div class="kpi"><div class="kpi-val">'+weights.length+'</div><div class="kpi-label">Registros</div></div>'+
+    '</div>'+
+    (weights.length>=2?'<p style="font-size:11px;color:#666;margin-bottom:4px;">Evolución de peso</p>'+weightChartSVG:'')+
+    '</div>':'')+ 
+
+    // NUTRITION AVERAGES
+    (avgKcal?
+    '<div class="section">'+
+    '<h3>🥗 Nutrición — Promedios ('+nutriVals.length+' días registrados)</h3>'+
+    '<div class="grid-4">'+
+    '<div class="kpi"><div class="kpi-val">'+avgKcal+'</div><div class="kpi-label">kcal/día promedio</div><div class="kpi-sub">Target: '+target.kcal+' kcal</div></div>'+
+    '<div class="kpi green"><div class="kpi-val" style="color:#4ade80">'+avgProt+'g</div><div class="kpi-label">Proteína promedio</div><div class="kpi-sub">Target: '+target.prot+'g</div></div>'+
+    '<div class="kpi orange"><div class="kpi-val" style="color:#fb923c">'+avgFat+'g</div><div class="kpi-label">Grasa promedio</div><div class="kpi-sub">Target: '+target.fat+'g</div></div>'+
+    '<div class="kpi blue"><div class="kpi-val" style="color:#47c4ff">'+avgFibra+'g</div><div class="kpi-label">Fibra promedio</div><div class="kpi-sub">Target: 25g</div></div>'+
+    '</div></div>':'')+ 
+
+    '</body></html>';
+
+  var win=window.open('','_blank');
+  win.document.write(html);
+  win.document.close();
+  setTimeout(function(){win.print();},800);
+}
+
 // ===== INIT =====
 renderGym(GYM_DAY1,'gym-day1');
 renderGym(GYM_DAY2,'gym-day2');
 renderGym(GYM_FULL,'gym-full');
 render();
+initNotifBtn();
 
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
