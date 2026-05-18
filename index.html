@@ -504,23 +504,23 @@ svg.chart{width:100%;overflow:visible;}
       <div class="nutri-quick-grid">
         <div class="nutri-field">
           <span class="nutri-label">Calorías (kcal)</span>
-          <input class="nutri-input" id="ni-kcal" type="number">
+          <input class="nutri-input" id="ni-kcal" type="number" oninput="autoSaveDayTotals()">
         </div>
         <div class="nutri-field">
           <span class="nutri-label">Proteína (g)</span>
-          <input class="nutri-input" id="ni-prot" type="number" min="0">
+          <input class="nutri-input" id="ni-prot" type="number" oninput="autoSaveDayTotals()" min="0">
         </div>
         <div class="nutri-field">
           <span class="nutri-label">Carb (g)</span>
-          <input class="nutri-input" id="ni-carb" type="number" min="0">
+          <input class="nutri-input" id="ni-carb" type="number" oninput="autoSaveDayTotals()" min="0">
         </div>
         <div class="nutri-field">
           <span class="nutri-label">Grasa (g)</span>
-          <input class="nutri-input" id="ni-fat" type="number" min="0">
+          <input class="nutri-input" id="ni-fat" type="number" oninput="autoSaveDayTotals()" min="0">
         </div>
         <div class="nutri-field">
           <span class="nutri-label">Fibra (g)</span>
-          <input class="nutri-input" id="ni-fibra" type="number">
+          <input class="nutri-input" id="ni-fibra" type="number" oninput="autoSaveDayTotals()">
         </div>
       </div>
       <button class="nutri-save-btn" onclick="saveNutriDay()">Guardar día</button>
@@ -1648,7 +1648,7 @@ function saveNutriData(nd){
 }
 
 function saveNutriDay(){
-  // If meals are present and totals not manually set, recalc first
+  // Recalc from meals first, then read totals
   recalcMealTotals();
   const kcal=parseFloat(document.getElementById('ni-kcal').value)||0;
   const prot=parseFloat(document.getElementById('ni-prot').value)||0;
@@ -1751,15 +1751,22 @@ function onFoodInput(id){
 
 function recalcMealTotals(){
   const rows=document.querySelectorAll('#meals-rows .meal-row-mobile');
+  const meals=[];
   let totalKcal=0,totalProt=0,totalCarb=0,totalFat=0,totalFibra=0;
   rows.forEach(r=>{
     const id=r.id.replace('meal-row-','');
-    totalKcal+=parseFloat(document.getElementById('m-kcal-'+id)?.value)||0;
-    totalProt+=parseFloat(document.getElementById('m-prot-'+id)?.value)||0;
-    totalCarb+=parseFloat(document.getElementById('m-carb-'+id)?.value)||0;
-    totalFat+=parseFloat(document.getElementById('m-fat-'+id)?.value)||0;
-    totalFibra+=parseFloat(document.getElementById('m-fibra-'+id)?.value)||0;
+    const kcal=parseFloat(document.getElementById('m-kcal-'+id)?.value)||0;
+    const prot=parseFloat(document.getElementById('m-prot-'+id)?.value)||0;
+    const carb=parseFloat(document.getElementById('m-carb-'+id)?.value)||0;
+    const fat=parseFloat(document.getElementById('m-fat-'+id)?.value)||0;
+    const fibra=parseFloat(document.getElementById('m-fibra-'+id)?.value)||0;
+    const name=document.getElementById('m-name-'+id)?.value||'';
+    const desc=document.getElementById('m-desc-'+id)?.value||'';
+    if(kcal>0||desc) meals.push({name,desc,kcal,prot,carb,fat,fibra});
+    totalKcal+=kcal;totalProt+=prot;totalCarb+=carb;totalFat+=fat;totalFibra+=fibra;
   });
+
+  // Update totals fields
   if(totalKcal>0){
     document.getElementById('ni-kcal').value=totalKcal;
     document.getElementById('ni-prot').value=Math.round(totalProt);
@@ -1767,6 +1774,20 @@ function recalcMealTotals(){
     document.getElementById('ni-fat').value=Math.round(totalFat);
     document.getElementById('ni-fibra').value=Math.round(totalFibra);
     updateDaySummaryPreview(totalKcal,totalProt,totalCarb,totalFat,totalFibra);
+  }
+
+  // AUTO-SAVE meals to localStorage immediately
+  if(meals.length>0){
+    const nd=getNutriData();
+    const key=nutriDateKey(nutriCurrentDate);
+    if(!nd[key])nd[key]={};
+    nd[key].meals=meals;
+    nd[key].kcal=totalKcal;
+    nd[key].prot=Math.round(totalProt);
+    nd[key].carb=Math.round(totalCarb);
+    nd[key].fat=Math.round(totalFat);
+    nd[key].fibra=Math.round(totalFibra);
+    saveNutriData(nd);
   }
 }
 
@@ -2503,6 +2524,22 @@ function renderFoodHistoryList(){
       <div class="food-item-macros">${f.kcal}kcal · P${f.prot||0}g · C${f.carb||0}g · G${f.fat||0}g</div>
       <button class="food-item-del" onclick="deleteFoodFromHistory('${f.desc.replace(/'/g,"\'")}')">✕</button>
     </div>`).join('');
+}
+
+function autoSaveDayTotals(){
+  // Save manually entered totals without touching meals
+  const kcal=parseFloat(document.getElementById('ni-kcal').value)||0;
+  const prot=parseFloat(document.getElementById('ni-prot').value)||0;
+  const carb=parseFloat(document.getElementById('ni-carb').value)||0;
+  const fat=parseFloat(document.getElementById('ni-fat').value)||0;
+  const fibra=parseFloat(document.getElementById('ni-fibra').value)||0;
+  if(!kcal)return;
+  const nd=getNutriData();
+  const key=nutriDateKey(nutriCurrentDate);
+  if(!nd[key])nd[key]={meals:[]};
+  nd[key].kcal=kcal;nd[key].prot=prot;nd[key].carb=carb;nd[key].fat=fat;nd[key].fibra=fibra;
+  saveNutriData(nd);
+  updateDaySummaryPreview(kcal,prot,carb,fat,fibra);
 }
 
 // ===== INIT =====
