@@ -1705,14 +1705,12 @@ function onFoodInput(id){
   const foods=getFoodHistory();
   const match=foods.find(f=>f.desc.toLowerCase()===desc.toLowerCase());
   if(match){
-    const kcalEl=document.getElementById('m-kcal-'+id);
-    const protEl=document.getElementById('m-prot-'+id);
-    const fatEl=document.getElementById('m-fat-'+id);
-    const fibraEl=document.getElementById('m-fibra-'+id);
-    if(kcalEl&&!kcalEl.value)kcalEl.value=match.kcal;
-    if(protEl&&!protEl.value)protEl.value=match.prot||'';
-    if(fatEl&&!fatEl.value)fatEl.value=match.fat||'';
-    if(fibraEl&&!fibraEl.value)fibraEl.value=match.fibra||'';
+    const set=(elId,val)=>{const el=document.getElementById(elId);if(el)el.value=val||'';};
+    set('m-kcal-'+id, match.kcal);
+    set('m-prot-'+id, match.prot);
+    set('m-carb-'+id, match.carb);
+    set('m-fat-'+id,  match.fat);
+    set('m-fibra-'+id,match.fibra);
     recalcMealTotals();
   }
 }
@@ -2372,9 +2370,10 @@ function preloadFoodHistory(){
   if(!s._foodHistory)s._foodHistory=[];
   preloaded.forEach(food=>{
     const idx=s._foodHistory.findIndex(f=>f.desc.toLowerCase()===food.desc.toLowerCase());
-    if(idx>=0) s._foodHistory[idx]=food;
+    if(idx>=0) s._foodHistory[idx]=food; // always overwrite with latest macros
     else s._foodHistory.push(food);
   });
+  // Always save — no flag check so updates always apply
   saveState(s);
 }
 
