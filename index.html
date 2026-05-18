@@ -230,6 +230,16 @@ svg.chart{width:100%;overflow:visible;}
 
 @media(max-width:400px){.weeks-grid{grid-template-columns:1fr;}}
 
+/* DELETE BUTTONS */
+.del-day-btn{display:flex;align-items:center;gap:5px;padding:5px 10px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:5px;font-family:DM Mono,monospace;font-size:9px;letter-spacing:1px;color:var(--fail);cursor:pointer;text-transform:uppercase;margin-top:8px;width:100%;}
+.del-day-btn:hover{background:rgba(248,113,113,.18);}
+.food-history-list{display:flex;flex-direction:column;gap:6px;margin-top:12px;}
+.food-item{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--card);border:1px solid var(--border);border-radius:6px;}
+.food-item-desc{flex:1;font-family:DM Mono,monospace;font-size:10px;color:var(--text);}
+.food-item-macros{font-family:DM Mono,monospace;font-size:9px;color:var(--muted);white-space:nowrap;}
+.food-item-del{background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;font-size:11px;padding:3px 7px;flex-shrink:0;}
+.food-item-del:hover{color:var(--fail);border-color:var(--fail);}
+
 /* NUTRITION PAGE */
 .nutri-page{padding:16px 20px 80px;}
 .nutri-section{margin-bottom:28px;}
@@ -550,6 +560,15 @@ svg.chart{width:100%;overflow:visible;}
         <div class="legend-item-small"><div class="legend-dot-small" style="background:var(--border);border:1px dashed var(--muted)"></div>Target</div>
       </div>
       <div id="nutri-weekly-chart"><div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-align:center;padding:20px;">Registrá al menos 3 días para ver la gráfica</div></div>
+    </div>
+  </div>
+
+  <!-- Food history management -->
+  <div class="nutri-section">
+    <div class="nutri-title">Historial de alimentos</div>
+    <div class="nutri-sub">Autocompletado · borrar en caso de error</div>
+    <div class="food-history-list" id="food-history-list">
+      <div style="font-family:DM Mono,monospace;font-size:11px;color:var(--muted);text-align:center;padding:10px;">Sin alimentos guardados aún</div>
     </div>
   </div>
 
@@ -1185,7 +1204,7 @@ function showPage(id,btn){
   document.getElementById('page-'+id).classList.add('active');
   btn.classList.add('active');
   if(id==='stats'){renderStats();restoreCalcInputs();}
-  if(id==='nutri')renderNutri();
+  if(id==='nutri'){renderNutri();renderFoodHistoryList();}
 }
 
 // ===== GPX/FIT IMPORT =====
@@ -1907,6 +1926,9 @@ function renderNutriDaySummary(dayData, target, dateStr){
       </div>`).join('')}
     </div>`;
   }
+  // Delete day button
+  const delKey=nutriDateKey(nutriCurrentDate);
+  el.innerHTML+=`<button class="del-day-btn" onclick="deleteNutriDay('${delKey}')">🗑 Borrar registro de este día</button>`;
 }
 
 function renderNutriWeeklyChart(nd, target){
@@ -2012,6 +2034,7 @@ function renderNutri(){
   renderNutriDaySummary(dayData,target,key);
   renderNutriWeeklyChart(nd,target);
   renderNutriAvgs(nd);
+  renderFoodHistoryList();
 }
 
 // ===== PUSH NOTIFICATIONS =====
@@ -2462,6 +2485,39 @@ const GYM_STRETCH=[
    sets:[{l:'Duración',v:'30–45"'}],
    tip:'Ideal para cerrar cualquier sesión de tren inferior. Si sentís tensión lumbar durante el entreno, hacé este entre ejercicios también.'},
 ];
+
+function deleteNutriDay(dateStr){
+  if(!confirm('¿Borrar el registro del '+dateStr+'?'))return;
+  const nd=getNutriData();
+  delete nd[dateStr];
+  saveNutriData(nd);
+  renderNutri();
+}
+
+function deleteFoodFromHistory(desc){
+  const s=getState();
+  if(!s._foodHistory)return;
+  s._foodHistory=s._foodHistory.filter(f=>f.desc!==desc);
+  saveState(s);
+  renderFoodHistoryList();
+  renderNutri();
+}
+
+function renderFoodHistoryList(){
+  const el=document.getElementById('food-history-list');
+  if(!el)return;
+  const foods=getFoodHistory();
+  if(!foods.length){
+    el.innerHTML='<div style="font-family:DM Mono,monospace;font-size:11px;color:var(--muted);text-align:center;padding:10px;">Sin alimentos guardados aún</div>';
+    return;
+  }
+  el.innerHTML=foods.map(f=>`
+    <div class="food-item">
+      <div class="food-item-desc">${f.desc}</div>
+      <div class="food-item-macros">${f.kcal}kcal · P${f.prot||0}g · C${f.carb||0}g · G${f.fat||0}g</div>
+      <button class="food-item-del" onclick="deleteFoodFromHistory('${f.desc.replace(/'/g,"\'")}')">✕</button>
+    </div>`).join('');
+}
 
 // ===== INIT =====
 renderGym(GYM_DAY1,'gym-day1');
