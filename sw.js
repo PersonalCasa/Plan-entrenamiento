@@ -1,4 +1,4 @@
-const CACHE = 'pde-plan-v3';
+const CACHE = 'pde-plan-v4';
 const STATIC = [
   '/Plan-entrenamiento/manifest.json',
   '/Plan-entrenamiento/icon-192.png',
@@ -15,6 +15,16 @@ self.addEventListener('activate', e => {
     Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
   ));
   self.clients.claim();
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(
+    clients.matchAll({type:'window',includeUncontrolled:true}).then(cls => {
+      for(const c of cls){ if(c.url.includes('Plan-entrenamiento')&&'focus' in c) return c.focus(); }
+      if(clients.openWindow) return clients.openWindow('/Plan-entrenamiento/');
+    })
+  );
 });
 
 self.addEventListener('fetch', e => {

@@ -292,7 +292,7 @@ svg.chart{width:100%;overflow:visible;}
 .legend-dot-small{width:8px;height:8px;border-radius:50%;}
 
 /* AVERAGES */
-.avg-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+.avg-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;} .avg-grid>.avg-card:first-child{grid-column:span 2;}
 .avg-card{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:10px 12px;}
 .avg-val{font-family:'Bebas Neue',sans-serif;font-size:26px;line-height:1;}
 .avg-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-top:2px;}
@@ -495,6 +495,10 @@ svg.chart{width:100%;overflow:visible;}
         <div class="nutri-field">
           <span class="nutri-label">Proteína (g)</span>
           <input class="nutri-input" id="ni-prot" type="number" min="0">
+        </div>
+        <div class="nutri-field">
+          <span class="nutri-label">Carb (g)</span>
+          <input class="nutri-input" id="ni-carb" type="number" min="0">
         </div>
         <div class="nutri-field">
           <span class="nutri-label">Grasa (g)</span>
@@ -1612,13 +1616,14 @@ function saveNutriData(nd){
 function saveNutriDay(){
   const kcal=parseFloat(document.getElementById('ni-kcal').value)||0;
   const prot=parseFloat(document.getElementById('ni-prot').value)||0;
+  const carb=parseFloat(document.getElementById('ni-carb').value)||0;
   const fat=parseFloat(document.getElementById('ni-fat').value)||0;
   const fibra=parseFloat(document.getElementById('ni-fibra').value)||0;
   if(!kcal){alert('Ingresá al menos las calorías');return;}
   const nd=getNutriData();
   const key=nutriDateKey(nutriCurrentDate);
   if(!nd[key])nd[key]={meals:[]};
-  nd[key].kcal=kcal;nd[key].prot=prot;nd[key].fat=fat;nd[key].fibra=fibra;
+  nd[key].kcal=kcal;nd[key].prot=prot;nd[key].carb=carb;nd[key].fat=fat;nd[key].fibra=fibra;
   saveNutriData(nd);
   renderNutri();
 }
@@ -1664,6 +1669,10 @@ function addMealRow(prefill){
       <input class="meal-input" id="m-fat-${id}" type="number" value="${p.fat||''}" oninput="recalcMealTotals()">
     </div>
     <div class="meal-field-group">
+      <label class="meal-field-label">Carb g</label>
+      <input class="meal-input" id="m-carb-${id}" type="number" value="${p.carb||''}" oninput="recalcMealTotals()">
+    </div>
+    <div class="meal-field-group">
       <label class="meal-field-label">Fibra g</label>
       <input class="meal-input" id="m-fibra-${id}" type="number" value="${p.fibra||''}" oninput="recalcMealTotals()">
     </div>
@@ -1706,30 +1715,30 @@ function onFoodInput(id){
 }
 
 function recalcMealTotals(){
-  // Sum all meal rows and auto-fill the day totals
   const rows=document.querySelectorAll('#meals-rows .meal-row-mobile');
-  let totalKcal=0,totalProt=0,totalFat=0,totalFibra=0;
+  let totalKcal=0,totalProt=0,totalCarb=0,totalFat=0,totalFibra=0;
   rows.forEach(r=>{
     const id=r.id.replace('meal-row-','');
     totalKcal+=parseFloat(document.getElementById('m-kcal-'+id)?.value)||0;
     totalProt+=parseFloat(document.getElementById('m-prot-'+id)?.value)||0;
+    totalCarb+=parseFloat(document.getElementById('m-carb-'+id)?.value)||0;
     totalFat+=parseFloat(document.getElementById('m-fat-'+id)?.value)||0;
     totalFibra+=parseFloat(document.getElementById('m-fibra-'+id)?.value)||0;
   });
   if(totalKcal>0){
     document.getElementById('ni-kcal').value=totalKcal;
     document.getElementById('ni-prot').value=Math.round(totalProt);
+    document.getElementById('ni-carb').value=Math.round(totalCarb);
     document.getElementById('ni-fat').value=Math.round(totalFat);
     document.getElementById('ni-fibra').value=Math.round(totalFibra);
-    // Live preview of day summary
-    updateDaySummaryPreview(totalKcal,totalProt,totalFat,totalFibra);
+    updateDaySummaryPreview(totalKcal,totalProt,totalCarb,totalFat,totalFibra);
   }
 }
 
-function updateDaySummaryPreview(kcal,prot,fat,fibra){
+function updateDaySummaryPreview(kcal,prot,carb,fat,fibra){
   const key=nutriDateKey(nutriCurrentDate);
   const target=getTarget(key);
-  const preview={kcal,prot,fat,fibra};
+  const preview={kcal,prot,carb,fat,fibra};
   renderNutriDaySummary(preview,target,key);
 }
 
@@ -1737,7 +1746,7 @@ function saveMeals(){
   const rows=document.querySelectorAll('#meals-rows .meal-row-mobile');
   if(!rows.length)return;
   const meals=[];
-  let totalKcal=0,totalProt=0,totalFat=0,totalFibra=0,count=0;
+  let totalKcal=0,totalProt=0,totalCarb=0,totalFat=0,totalFibra=0,count=0;
   rows.forEach(r=>{
     const id=r.id.replace('meal-row-','');
     const kcal=parseFloat(document.getElementById('m-kcal-'+id)?.value)||0;
@@ -1747,10 +1756,11 @@ function saveMeals(){
     const name=document.getElementById('m-name-'+id)?.value||'';
     const desc=document.getElementById('m-desc-'+id)?.value||'';
     if(kcal>0){
-      const food={desc,kcal,prot,fat,fibra};
+      const carb2=parseFloat(document.getElementById('m-carb-'+id)?.value)||0;
+      const food={desc,kcal,prot,carb:carb2,fat,fibra};
       meals.push({name,...food});
       saveFoodToHistory(food);
-      totalKcal+=kcal;totalProt+=prot;totalFat+=fat;totalFibra+=fibra;count++;
+      totalKcal+=kcal;totalProt+=prot;totalCarb+=carb2;totalFat+=fat;totalFibra+=fibra;count++;
     }
   });
   if(!meals.length)return;
@@ -1761,11 +1771,13 @@ function saveMeals(){
   // Auto-fill totals from meals if not already set
   if(!nd[key].kcal&&totalKcal){
     nd[key].kcal=totalKcal;
-    nd[key].prot=count?Math.round(totalProt/count):0;
-    nd[key].fat=count?Math.round(totalFat/count):0;
+    nd[key].prot=Math.round(totalProt);
+    nd[key].carb=Math.round(totalCarb);
+    nd[key].fat=Math.round(totalFat);
     nd[key].fibra=Math.round(totalFibra);
     document.getElementById('ni-kcal').value=totalKcal;
     document.getElementById('ni-prot').value=nd[key].prot;
+    document.getElementById('ni-carb').value=nd[key].carb;
     document.getElementById('ni-fat').value=nd[key].fat;
     document.getElementById('ni-fibra').value=nd[key].fibra;
   }
@@ -1774,48 +1786,40 @@ function saveMeals(){
 }
 
 function getTarget(dateStr){
-  // dateStr optional — if provided, checks if it's a run day and adds bonus
-  const s=getState();
-  const c=s._calcInputs;
-  const peso=c?.peso||72;
-  const altura=c?.altura||168;
-  const edad=c?.edad||29;
-  const actFactor=c?.actFactor||1.375;
-  const objetivo=c?.objetivo||0.5;
-  const bmr=Math.round(10*peso+6.25*altura-5*edad+5);
-  const tdee=Math.round(bmr*actFactor);
-  const runWeekly=Math.round((3*estimateRunCalories(peso,12,6))/7);
-  const deficit=Math.round(objetivo*7700/7);
-  let kcal=tdee+runWeekly-deficit;
+  // Fixed targets based on Nico's nutrition plan
+  // Rest day vs training day targets
+  var REST  = {kcal:2100, prot:150, fat:65,  carb:205, fibra:32};
+  var TRAIN = {kcal:2600, prot:160, fat:68,  carb:330, fibra:30};
 
-  // Run day bonus: check if dateStr has a planned run session
-  let runBonus=0;
-  let runDayDesc='';
+  // Check if dateStr is a training day
+  var isTrainDay = false;
+  var runBonus = 0;
+  var runDayDesc = '';
   if(dateStr){
-    const target=new Date(dateStr);target.setHours(0,0,0,0);
-    for(const w of WEEKS){
-      const days=weekDays(w.n-1);
-      for(const sess of w.sess){
-        if(!sess.isRun)continue;
-        const d=new Date(days[sess.d]);d.setHours(0,0,0,0);
-        if(d.getTime()===target.getTime()){
-          // Estimate bonus from planned km
-          const km=parseFloat(sess.km)||10;
-          runBonus=estimateRunCalories(peso,km,6);
-          runDayDesc=sess.desc;
+    var target2 = new Date(dateStr); target2.setHours(0,0,0,0);
+    for(var wi=0;wi<WEEKS.length;wi++){
+      var w2=WEEKS[wi];
+      var days2=weekDays(w2.n-1);
+      for(var si=0;si<w2.sess.length;si++){
+        var sess2=w2.sess[si];
+        var d2=new Date(days2[sess2.d]); d2.setHours(0,0,0,0);
+        if(d2.getTime()===target2.getTime()){
+          isTrainDay=true;
+          if(sess2.isRun){
+            runBonus=estimateRunCalories(72,parseFloat(sess2.km)||10,6);
+            runDayDesc=sess2.desc;
+          }
           break;
         }
       }
-      if(runBonus)break;
+      if(isTrainDay)break;
     }
-    if(runBonus) kcal=kcal+runBonus; // add on top of daily average
   }
-
-  // Convert % targets to grams based on kcal target
-  const protG = Math.round(kcal * 0.30 / 4);   // 30% protein, 4 kcal/g
-  const fatG  = Math.round(kcal * 0.25 / 9);   // 25% fat, 9 kcal/g
-  const fibraG = 25;                             // 25g fiber standard recommendation
-  return{kcal:Math.round(kcal),prot:protG,fat:fatG,fibra:fibraG,runBonus,runDayDesc};
+  var t = isTrainDay ? TRAIN : REST;
+  return {
+    kcal:t.kcal, prot:t.prot, fat:t.fat, carb:t.carb, fibra:t.fibra,
+    runBonus:runBonus, runDayDesc:runDayDesc, isTrainDay:isTrainDay
+  };
 }
 
 function renderNutriDaySummary(dayData, target, dateStr){
@@ -1823,11 +1827,21 @@ function renderNutriDaySummary(dayData, target, dateStr){
 
   // Show run day banner if applicable
   let runBanner='';
-  if(target.runBonus>0){
-    runBanner=`<div style="display:flex;align-items:center;gap:6px;padding:6px 10px;margin-bottom:10px;background:rgba(232,255,71,.06);border:1px solid rgba(232,255,71,.15);border-radius:5px;">
-      <span style="font-size:14px">🏃</span>
-      <span style="font-family:DM Mono,monospace;font-size:10px;color:var(--accent);">DÍA DE RUNNING — +${target.runBonus} kcal extra incluidas en el target</span>
+  if(target.isTrainDay){
+    const bannerColor=target.runBonus>0?'rgba(232,255,71,.06)':'rgba(167,139,250,.06)';
+    const bannerBorder=target.runBonus>0?'rgba(232,255,71,.2)':'rgba(167,139,250,.2)';
+    const bannerTextColor=target.runBonus>0?'var(--accent)':'var(--gym)';
+    const bannerIcon=target.runBonus>0?'🏃':'💪';
+    const bannerText=target.runBonus>0?'DÍA DE RUNNING — target +carbohidratos':'DÍA DE GYM — target activo';
+    runBanner=`<div style="display:flex;align-items:center;gap:6px;padding:6px 10px;margin-bottom:10px;background:${bannerColor};border:1px solid ${bannerBorder};border-radius:5px;">
+      <span style="font-size:14px">${bannerIcon}</span>
+      <span style="font-family:DM Mono,monospace;font-size:10px;color:${bannerTextColor};">${bannerText} · ${target.kcal} kcal · ${target.carb}g carb</span>
     </div>`;
+  } else {
+    runBanner='<div style="display:flex;align-items:center;gap:6px;padding:6px 10px;margin-bottom:10px;background:rgba(107,114,128,.06);border:1px solid rgba(107,114,128,.15);border-radius:5px;">'+
+      '<span style="font-size:14px">😴</span>'+
+      '<span style="font-family:DM Mono,monospace;font-size:10px;color:var(--muted);">DÍA DE DESCANSO · '+target.kcal+' kcal · '+target.carb+'g carb</span>'+
+      '</div>';
   }
 
   if(!dayData||!dayData.kcal){
@@ -1837,6 +1851,7 @@ function renderNutriDaySummary(dayData, target, dateStr){
   const rows=[
     {label:'Calorías',consumed:dayData.kcal,target:target.kcal,unit:'kcal',fill:'fill-kcal',color:'var(--accent)'},
     {label:'Proteína',consumed:dayData.prot,target:target.prot,unit:'g',fill:'fill-prot',color:'#4ade80'},
+    {label:'Carbohidratos',consumed:dayData.carb||0,target:target.carb,unit:'g',fill:'fill-carb',color:'#fbbf24'},
     {label:'Grasa',consumed:dayData.fat,target:target.fat,unit:'g',fill:'fill-fat',color:'#fb923c'},
     {label:'Fibra',consumed:dayData.fibra,target:target.fibra,unit:'g',fill:'fill-fibra',color:'var(--accent2)'},
   ];
@@ -1919,8 +1934,9 @@ function renderNutriAvgs(nd){
   const target=getTarget();
   const kcalColor=Math.abs(avgKcal-target.kcal)<150?'var(--ok)':avgKcal>target.kcal?'var(--fail)':'var(--accent)';
   el.innerHTML=`
-    <div class="avg-card"><div class="avg-val" style="color:${kcalColor}">${avgKcal}</div><div class="avg-label">kcal/día</div><div class="avg-sub">target: ${target.kcal} · ${vals.length} días</div></div>
+    <div class="avg-card"><div class="avg-val" style="color:${kcalColor}">${avgKcal}</div><div class="avg-label">kcal/día</div><div class="avg-sub">target descanso: ${getTarget(null).kcal}</div></div>
     <div class="avg-card"><div class="avg-val" style="color:#4ade80">${avgProt}g</div><div class="avg-label">Proteína</div><div class="avg-sub">target: ${target.prot}g</div></div>
+    <div class="avg-card"><div class="avg-val" style="color:#fbbf24">${avgCarb}g</div><div class="avg-label">Carbohidratos</div><div class="avg-sub">target: ${target.carb}g</div></div>
     <div class="avg-card"><div class="avg-val" style="color:#fb923c">${avgFat}g</div><div class="avg-label">Grasa</div><div class="avg-sub">target: ${target.fat}g</div></div>
     <div class="avg-card"><div class="avg-val" style="color:var(--accent2)">${avgFibra}g</div><div class="avg-label">Fibra</div><div class="avg-sub">target: ${target.fibra}g</div></div>`;
 }
@@ -1935,6 +1951,7 @@ function renderNutri(){
   // Fill inputs with saved data
   document.getElementById('ni-kcal').value=dayData?.kcal||'';
   document.getElementById('ni-prot').value=dayData?.prot||'';
+  document.getElementById('ni-carb').value=dayData?.carb||'';
   document.getElementById('ni-fat').value=dayData?.fat||'';
   document.getElementById('ni-fibra').value=dayData?.fibra||'';
 
@@ -1975,7 +1992,7 @@ async function toggleNotifications(){
   if(Notification.permission==='granted'){
     // Already granted — schedule
     scheduleTrainingReminders();
-    document.getElementById('notif-btn').textContent='🔔 Activadas';
+    document.getElementById('notif-btn').textContent='🔔 7:00 AM';
     document.getElementById('notif-btn').style.background='rgba(74,222,128,.15)';
     document.getElementById('notif-btn').style.borderColor='var(--ok)';
     document.getElementById('notif-btn').style.color='var(--ok)';
@@ -1984,7 +2001,7 @@ async function toggleNotifications(){
   const perm=await Notification.requestPermission();
   if(perm==='granted'){
     scheduleTrainingReminders();
-    document.getElementById('notif-btn').textContent='🔔 Activadas';
+    document.getElementById('notif-btn').textContent='🔔 7:00 AM';
     document.getElementById('notif-btn').style.background='rgba(74,222,128,.15)';
     document.getElementById('notif-btn').style.borderColor='var(--ok)';
     document.getElementById('notif-btn').style.color='var(--ok)';
@@ -1996,15 +2013,35 @@ async function toggleNotifications(){
 }
 
 function scheduleTrainingReminders(){
-  // Check every time the page loads if today has a session
-  showTrainingNotifToday();
+  if(Notification.permission!=='granted')return;
+  scheduleDailyAt(7,0);
+  // If already past 7:00 AM and not shown yet today, show now
+  const now=new Date();
+  if(now.getHours()>=7) showTrainingNotifToday();
+}
+
+function scheduleDailyAt(h,m){
+  const now=new Date();
+  const next=new Date();
+  next.setHours(h,m,0,0);
+  if(next<=now) next.setDate(next.getDate()+1);
+  const msUntil=next.getTime()-now.getTime();
+  if(window._notifTimer) clearTimeout(window._notifTimer);
+  window._notifTimer=setTimeout(()=>{
+    showTrainingNotifToday();
+    scheduleDailyAt(h,m); // re-schedule for next day
+  }, msUntil);
+  // Update button label with scheduled time
+  const btn=document.getElementById('notif-btn');
+  if(btn&&btn.textContent.includes('Activadas'))
+    btn.title='Recordatorio programado para las 7:00 AM';
 }
 
 function showTrainingNotifToday(){
   if(Notification.permission!=='granted')return;
   const todayKey=nutriDateKey(new Date());
   const todayDate=new Date();todayDate.setHours(0,0,0,0);
-  // Find today's sessions
+
   const sessions=[];
   for(const w of WEEKS){
     const days=weekDays(w.n-1);
@@ -2014,22 +2051,35 @@ function showTrainingNotifToday(){
     }
   }
   if(!sessions.length)return;
-  // Check if already notified today
+
   const st=getState();
   if(st['_notifShown_'+todayKey])return;
   st['_notifShown_'+todayKey]=true;saveState(st);
 
-  const desc=sessions.map(s=>s.desc).join(' · ');
   const icons={'run-long':'🏃','run-short':'⚡','gym':'💪','race-day':'🏁'};
   const icon=icons[sessions[0].cls]||'🏃';
-  setTimeout(()=>{
+  const desc=sessions.map(s=>s.desc).join(' · ');
+  const isRunDay=sessions.some(s=>s.isRun);
+
+  // Use SW showNotification if available (works when app is in background)
+  if('serviceWorker' in navigator && navigator.serviceWorker.controller){
+    navigator.serviceWorker.ready.then(reg=>{
+      reg.showNotification('RunPlan — Hoy entrenás 💪',{
+        body:icon+' '+desc+(isRunDay?' · Hidratate bien':''),
+        icon:'/Plan-entrenamiento/icon-192.png',
+        badge:'/Plan-entrenamiento/icon-192.png',
+        tag:'training-today',
+        vibrate:[200,100,200],
+      });
+    });
+  } else {
+    // Fallback: basic Notification API
     new Notification('RunPlan — Hoy entrenás 💪',{
-      body:`${icon} ${desc}`,
+      body:icon+' '+desc,
       icon:'/Plan-entrenamiento/icon-192.png',
-      badge:'/Plan-entrenamiento/icon-192.png',
       tag:'training-today',
     });
-  },2000);
+  }
 }
 
 function initNotifBtn(){
@@ -2037,11 +2087,12 @@ function initNotifBtn(){
   const btn=document.getElementById('notif-btn');
   if(!btn)return;
   if(s._notifEnabled&&Notification.permission==='granted'){
-    btn.textContent='🔔 Activadas';
+    btn.textContent='🔔 7:00 AM';
     btn.style.background='rgba(74,222,128,.15)';
     btn.style.borderColor='var(--ok)';
     btn.style.color='var(--ok)';
-    showTrainingNotifToday();
+    btn.title='Recordatorio activo — 7:00 AM todos los días de entrenamiento';
+    scheduleTrainingReminders();
   }
 }
 
@@ -2137,6 +2188,7 @@ function exportToPDF(){
   var nutriVals=Object.values(nd).filter(function(v){return v&&v.kcal;});
   var avgKcal=nutriVals.length?Math.round(nutriVals.reduce(function(a,v){return a+(v.kcal||0);},0)/nutriVals.length):null;
   var avgProt=nutriVals.length?Math.round(nutriVals.reduce(function(a,v){return a+(v.prot||0);},0)/nutriVals.length):null;
+  var avgCarb=nutriVals.length?Math.round(nutriVals.reduce(function(a,v){return a+(v.carb||0);},0)/nutriVals.length):null;
   var avgFat=nutriVals.length?Math.round(nutriVals.reduce(function(a,v){return a+(v.fat||0);},0)/nutriVals.length):null;
   var avgFibra=nutriVals.length?Math.round(nutriVals.reduce(function(a,v){return a+(v.fibra||0);},0)/nutriVals.length):null;
 
@@ -2291,6 +2343,7 @@ function exportToPDF(){
     '<div class="grid-4">'+
     '<div class="kpi"><div class="kpi-val">'+avgKcal+'</div><div class="kpi-label">kcal/día promedio</div><div class="kpi-sub">Target: '+target.kcal+' kcal</div></div>'+
     '<div class="kpi green"><div class="kpi-val" style="color:#4ade80">'+avgProt+'g</div><div class="kpi-label">Proteína promedio</div><div class="kpi-sub">Target: '+target.prot+'g</div></div>'+
+    '<div class="kpi"><div class="kpi-val" style="color:#fbbf24">'+(avgCarb||'—')+'g</div><div class="kpi-label">Carbohidratos promedio</div><div class="kpi-sub">Target descanso: '+target.carb+'g</div></div>'+
     '<div class="kpi orange"><div class="kpi-val" style="color:#fb923c">'+avgFat+'g</div><div class="kpi-label">Grasa promedio</div><div class="kpi-sub">Target: '+target.fat+'g</div></div>'+
     '<div class="kpi blue"><div class="kpi-val" style="color:#47c4ff">'+avgFibra+'g</div><div class="kpi-label">Fibra promedio</div><div class="kpi-sub">Target: 25g</div></div>'+
     '</div></div>':'')+ 
