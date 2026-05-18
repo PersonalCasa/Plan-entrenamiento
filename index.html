@@ -222,6 +222,72 @@ svg.chart{width:100%;overflow:visible;}
 
 @media(max-width:400px){.weeks-grid{grid-template-columns:1fr;}}
 
+/* NUTRITION PAGE */
+.nutri-page{padding:16px 20px 80px;}
+.nutri-section{margin-bottom:28px;}
+.nutri-title{font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--accent);margin-bottom:2px;}
+.nutri-sub{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+
+/* DATE NAV */
+.date-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.date-nav-btn{width:32px;height:32px;background:var(--card);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.date-nav-btn:hover{border-color:var(--accent);}
+.date-nav-label{font-family:'DM Mono',monospace;font-size:12px;color:var(--text);letter-spacing:1px;text-align:center;flex:1;}
+.date-today-btn{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--accent);background:rgba(232,255,71,.08);border:1px solid rgba(232,255,71,.2);border-radius:4px;padding:3px 8px;cursor:pointer;text-transform:uppercase;}
+
+/* QUICK ENTRY */
+.nutri-quick{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:12px;}
+.nutri-quick-title{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:12px;}
+.nutri-quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.nutri-field{display:flex;flex-direction:column;gap:3px;}
+.nutri-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;}
+.nutri-input{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:7px 10px;font-family:'DM Mono',monospace;font-size:13px;color:var(--text);outline:none;width:100%;}
+.nutri-input:focus{border-color:var(--accent);}
+.nutri-save-btn{width:100%;padding:7px;background:rgba(232,255,71,.1);border:1px solid rgba(232,255,71,.3);border-radius:5px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--accent);cursor:pointer;text-transform:uppercase;}
+.nutri-save-btn:hover{background:rgba(232,255,71,.2);}
+
+/* MEALS */
+.meals-toggle{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--accent2);cursor:pointer;text-decoration:underline;margin-bottom:10px;display:block;text-transform:uppercase;}
+.meals-section{display:none;margin-top:10px;}
+.meals-section.open{display:block;}
+.meal-row{display:grid;grid-template-columns:80px 1fr 60px 60px 60px 60px 36px;gap:6px;align-items:center;margin-bottom:6px;}
+.meal-name{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;}
+.meal-input{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:5px 7px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text);outline:none;width:100%;}
+.meal-input:focus{border-color:var(--accent);}
+.meal-del{background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;font-size:12px;padding:4px 8px;}
+.meal-del:hover{color:var(--fail);border-color:var(--fail);}
+.meal-headers{display:grid;grid-template-columns:80px 1fr 60px 60px 60px 60px 36px;gap:6px;margin-bottom:4px;}
+.meal-hdr{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;text-align:center;}
+.meal-hdr:first-child{text-align:left;}
+
+/* DAY SUMMARY BARS */
+.day-summary{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:12px;}
+.summary-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.summary-row:last-child{margin-bottom:0;}
+.summary-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;min-width:72px;text-transform:uppercase;}
+.summary-bar-wrap{flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden;}
+.summary-bar-fill{height:100%;border-radius:4px;transition:width .4s ease;}
+.fill-kcal{background:var(--accent);}
+.fill-prot{background:#4ade80;}
+.fill-fat{background:#fb923c;}
+.fill-fibra{background:var(--accent2);}
+.summary-vals{font-family:'DM Mono',monospace;font-size:10px;color:var(--text);white-space:nowrap;min-width:90px;text-align:right;}
+.summary-vals span{color:var(--muted);}
+
+/* WEEKLY CHART */
+.nutri-chart-wrap{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px;overflow:hidden;}
+.nutri-chart-title{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:12px;}
+.chart-legend{display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap;}
+.legend-item-small{display:flex;align-items:center;gap:5px;font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);}
+.legend-dot-small{width:8px;height:8px;border-radius:50%;}
+
+/* AVERAGES */
+.avg-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+.avg-card{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:10px 12px;}
+.avg-val{font-family:'Bebas Neue',sans-serif;font-size:26px;line-height:1;}
+.avg-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-top:2px;}
+.avg-sub{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-top:2px;}
+
 /* CALORIE CALCULATOR */
 .cal-calc{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px;}
 .calc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
@@ -267,6 +333,7 @@ svg.chart{width:100%;overflow:visible;}
   <button class="nav-tab active" onclick="showPage('plan',this)">Plan</button>
   <button class="nav-tab" onclick="showPage('gym',this)">Gym</button>
   <button class="nav-tab" onclick="showPage('stats',this)">Stats</button>
+  <button class="nav-tab" onclick="showPage('nutri',this)">Nutrición</button>
 </div>
 
 <!-- ===== PLAN PAGE ===== -->
@@ -430,6 +497,100 @@ svg.chart{width:100%;overflow:visible;}
       <div class="chart-empty">Sin corridas completadas aún</div>
     </div>
     <div id="run-history-table"></div>
+  </div>
+
+</div>
+</div>
+
+<!-- ===== NUTRITION PAGE ===== -->
+<div class="page" id="page-nutri">
+<div class="nutri-page">
+
+  <div class="nutri-section">
+    <div class="nutri-title">Registro diario</div>
+    <div class="nutri-sub">Calorías · Proteína · Grasa · Fibra</div>
+
+    <div class="date-nav">
+      <button class="date-nav-btn" onclick="nutriChangeDay(-1)">‹</button>
+      <span class="date-nav-label" id="nutri-date-label">—</span>
+      <button class="date-today-btn" onclick="nutriGoToday()">Hoy</button>
+      <button class="date-nav-btn" onclick="nutriChangeDay(1)">›</button>
+    </div>
+
+    <!-- Quick total entry -->
+    <div class="nutri-quick">
+      <div class="nutri-quick-title">📊 Total del día</div>
+      <div class="nutri-quick-grid">
+        <div class="nutri-field">
+          <span class="nutri-label">Calorías (kcal)</span>
+          <input class="nutri-input" id="ni-kcal" type="number" placeholder="2000">
+        </div>
+        <div class="nutri-field">
+          <span class="nutri-label">Proteína (%)</span>
+          <input class="nutri-input" id="ni-prot" type="number" placeholder="30" min="0" max="100">
+        </div>
+        <div class="nutri-field">
+          <span class="nutri-label">Grasa (%)</span>
+          <input class="nutri-input" id="ni-fat" type="number" placeholder="25" min="0" max="100">
+        </div>
+        <div class="nutri-field">
+          <span class="nutri-label">Fibra (g)</span>
+          <input class="nutri-input" id="ni-fibra" type="number" placeholder="25">
+        </div>
+      </div>
+      <button class="nutri-save-btn" onclick="saveNutriDay()">Guardar día</button>
+    </div>
+
+    <!-- Optional meals breakdown -->
+    <span class="meals-toggle" onclick="toggleMeals()">+ Desglosar por comida (opcional)</span>
+    <div class="meals-section" id="meals-section">
+      <div class="meal-headers">
+        <div class="meal-hdr">Comida</div>
+        <div class="meal-hdr">Descripción</div>
+        <div class="meal-hdr">kcal</div>
+        <div class="meal-hdr">Prot %</div>
+        <div class="meal-hdr">Grasa %</div>
+        <div class="meal-hdr">Fibra g</div>
+        <div class="meal-hdr"></div>
+      </div>
+      <div id="meals-rows"></div>
+      <button onclick="addMealRow()" style="margin-top:6px;padding:5px 12px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:4px;font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);cursor:pointer;text-transform:uppercase;letter-spacing:1px;">+ Agregar comida</button>
+      <button onclick="saveMeals()" style="margin-top:6px;margin-left:8px;padding:5px 12px;background:rgba(232,255,71,.08);border:1px solid rgba(232,255,71,.2);border-radius:4px;font-family:'DM Mono',monospace;font-size:9px;color:var(--accent);cursor:pointer;text-transform:uppercase;letter-spacing:1px;">Guardar comidas</button>
+    </div>
+  </div>
+
+  <!-- Day summary bars -->
+  <div class="nutri-section">
+    <div class="nutri-title">Resumen del día</div>
+    <div class="nutri-sub">Necesario vs consumido</div>
+    <div class="day-summary" id="nutri-day-summary">
+      <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-align:center;padding:10px;">Sin datos para este día</div>
+    </div>
+  </div>
+
+  <!-- Weekly chart -->
+  <div class="nutri-section">
+    <div class="nutri-title">Últimas 3 semanas</div>
+    <div class="nutri-sub">Calorías consumidas vs target</div>
+    <div class="nutri-chart-wrap">
+      <div class="chart-legend">
+        <div class="legend-item-small"><div class="legend-dot-small" style="background:var(--accent)"></div>Consumido</div>
+        <div class="legend-item-small"><div class="legend-dot-small" style="background:var(--border);border:1px dashed var(--muted)"></div>Target</div>
+      </div>
+      <div id="nutri-weekly-chart"><div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-align:center;padding:20px;">Registrá al menos 3 días para ver la gráfica</div></div>
+    </div>
+  </div>
+
+  <!-- Averages -->
+  <div class="nutri-section">
+    <div class="nutri-title">Promedios</div>
+    <div class="nutri-sub">Basado en todos los registros</div>
+    <div class="avg-grid" id="nutri-avgs">
+      <div class="avg-card"><div class="avg-val" style="color:var(--accent)">—</div><div class="avg-label">kcal/día</div><div class="avg-sub">promedio</div></div>
+      <div class="avg-card"><div class="avg-val" style="color:#4ade80">—</div><div class="avg-label">Proteína</div><div class="avg-sub">% promedio</div></div>
+      <div class="avg-card"><div class="avg-val" style="color:#fb923c">—</div><div class="avg-label">Grasa</div><div class="avg-sub">% promedio</div></div>
+      <div class="avg-card"><div class="avg-val" style="color:var(--accent2)">—</div><div class="avg-label">Fibra</div><div class="avg-sub">g/día promedio</div></div>
+    </div>
   </div>
 
 </div>
@@ -933,8 +1094,8 @@ function renderStats(){
     const diffStr=(diff>0?'+':'')+diff.toFixed(1)+' kg';
     const diffColor=diff<=0?'var(--ok)':'var(--fail)';
     wc.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-      <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);">PESO CORPORAL</span>
-      <span style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:${diffColor};">${diffStr}</span>
+      <span style="font-family:DM Mono,monospace;font-size:10px;color:var(--muted);">PESO CORPORAL</span>
+      <span style="font-family:Bebas Neue,sans-serif;font-size:20px;color:${diffColor};">${diffStr}</span>
     </div>
     <svg class="chart" viewBox="0 0 ${W} ${H}">
       <polyline points="${pts}" fill="none" stroke="var(--accent2)" stroke-width="1.5" stroke-linejoin="round"/>
@@ -942,8 +1103,8 @@ function renderStats(){
         <text x="${xScale(i)}" y="${yScale(w.kg)-6}" text-anchor="middle" font-family="DM Mono" font-size="7" fill="var(--muted)">${w.kg}</text>`).join('')}
     </svg>
     <div style="display:flex;justify-content:space-between;margin-top:4px;">
-      <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);">${weights[0].date}</span>
-      <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);">${weights[weights.length-1].date}</span>
+      <span style="font-family:DM Mono,monospace;font-size:9px;color:var(--muted);">${weights[0].date}</span>
+      <span style="font-family:DM Mono,monospace;font-size:9px;color:var(--muted);">${weights[weights.length-1].date}</span>
     </div>`;
   }
 
@@ -979,8 +1140,8 @@ function renderStats(){
     const diffStr=(diff<=0?'':'+')+diff.toFixed(2)+' min/km';
     const diffColor=diff<=0?'var(--ok)':'var(--fail)';
     pc.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-      <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);">RITMO /km</span>
-      <span style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:${diffColor};">${diffStr}</span>
+      <span style="font-family:DM Mono,monospace;font-size:10px;color:var(--muted);">RITMO /km</span>
+      <span style="font-family:Bebas Neue,sans-serif;font-size:20px;color:${diffColor};">${diffStr}</span>
     </div>
     <svg class="chart" viewBox="0 0 ${W} ${H}">
       <polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linejoin="round"/>
@@ -1010,6 +1171,7 @@ function showPage(id,btn){
   document.getElementById('page-'+id).classList.add('active');
   btn.classList.add('active');
   if(id==='stats'){renderStats();restoreCalcInputs();}
+  if(id==='nutri')renderNutri();
 }
 
 // ===== GPX/FIT IMPORT =====
@@ -1265,11 +1427,11 @@ function showManualSelector(logId, kmStr, duration, activityDate){
   logEl.className='import-log visible';
   logEl.innerHTML=`
     <div style="margin-bottom:8px;color:var(--fail);">⚠️ No se encontró sesión de running dentro de ±3 días del ${activityDate||'fecha desconocida'}. Elegí manualmente:</div>
-    <select id="manual-sess-select" style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:4px;padding:6px 8px;font-family:'DM Mono',monospace;font-size:10px;color:var(--text);margin-bottom:8px;">
+    <select id="manual-sess-select" style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:4px;padding:6px 8px;font-family:DM Mono,monospace;font-size:10px;color:var(--text);margin-bottom:8px;">
       <option value="">— Seleccioná una sesión —</option>
       ${opts.map(o=>`<option value="${o.key}">${o.label}</option>`).join('')}
     </select>
-    <button onclick="assignManual('${logId}')" style="width:100%;padding:6px;background:rgba(232,255,71,.1);border:1px solid rgba(232,255,71,.3);border-radius:4px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--accent);cursor:pointer;text-transform:uppercase;">
+    <button onclick="assignManual('${logId}')" style="width:100%;padding:6px;background:rgba(232,255,71,.1);border:1px solid rgba(232,255,71,.3);border-radius:4px;font-family:DM Mono,monospace;font-size:10px;letter-spacing:2px;color:var(--accent);cursor:pointer;text-transform:uppercase;">
       Asignar a esta sesión
     </button>`;
 }
@@ -1424,6 +1586,265 @@ function restoreCalcInputs(){
     if(sel)sel.value=c.objetivo;
   }
   calcTDEE();
+}
+
+// ===== NUTRITION =====
+let nutriCurrentDate = new Date();
+nutriCurrentDate.setHours(0,0,0,0);
+
+function nutriDateKey(d){ return d.toISOString().split('T')[0]; }
+function nutriFormatLabel(d){
+  const mo=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const days=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  const todayStr = nutriDateKey(new Date());
+  const str = nutriDateKey(d);
+  if(str===todayStr) return 'Hoy — '+d.getDate()+' '+mo[d.getMonth()];
+  const yest = new Date(); yest.setDate(yest.getDate()-1);
+  if(str===nutriDateKey(yest)) return 'Ayer — '+d.getDate()+' '+mo[d.getMonth()];
+  return days[d.getDay()]+' '+d.getDate()+' '+mo[d.getMonth()];
+}
+
+function nutriChangeDay(delta){
+  nutriCurrentDate.setDate(nutriCurrentDate.getDate()+delta);
+  renderNutri();
+}
+function nutriGoToday(){
+  nutriCurrentDate = new Date(); nutriCurrentDate.setHours(0,0,0,0);
+  renderNutri();
+}
+
+function getNutriData(){
+  const s=getState();
+  return s._nutri||{};
+}
+function saveNutriData(nd){
+  const s=getState();
+  s._nutri=nd;
+  saveState(s);
+}
+
+function saveNutriDay(){
+  const kcal=parseFloat(document.getElementById('ni-kcal').value)||0;
+  const prot=parseFloat(document.getElementById('ni-prot').value)||0;
+  const fat=parseFloat(document.getElementById('ni-fat').value)||0;
+  const fibra=parseFloat(document.getElementById('ni-fibra').value)||0;
+  if(!kcal){alert('Ingresá al menos las calorías');return;}
+  const nd=getNutriData();
+  const key=nutriDateKey(nutriCurrentDate);
+  if(!nd[key])nd[key]={meals:[]};
+  nd[key].kcal=kcal;nd[key].prot=prot;nd[key].fat=fat;nd[key].fibra=fibra;
+  saveNutriData(nd);
+  renderNutri();
+}
+
+function toggleMeals(){
+  document.getElementById('meals-section').classList.toggle('open');
+}
+
+let mealRowCount=0;
+function addMealRow(){
+  mealRowCount++;
+  const id=mealRowCount;
+  const row=document.createElement('div');
+  row.className='meal-row';row.id='meal-row-'+id;
+  const meals=['Desayuno','Almuerzo','Merienda','Cena','Snack'];
+  const mealOpts=meals.map(m=>`<option>${m}</option>`).join('');
+  row.innerHTML=`
+    <select class="meal-input" id="m-name-${id}" style="font-size:10px;">${mealOpts}</select>
+    <input class="meal-input" id="m-desc-${id}" placeholder="Descripción" style="font-size:10px;">
+    <input class="meal-input" id="m-kcal-${id}" type="number" placeholder="500">
+    <input class="meal-input" id="m-prot-${id}" type="number" placeholder="30">
+    <input class="meal-input" id="m-fat-${id}" type="number" placeholder="25">
+    <input class="meal-input" id="m-fibra-${id}" type="number" placeholder="5">
+    <button class="meal-del" onclick="document.getElementById('meal-row-${id}').remove()">✕</button>`;
+  document.getElementById('meals-rows').appendChild(row);
+}
+
+function saveMeals(){
+  const rows=document.querySelectorAll('#meals-rows .meal-row');
+  if(!rows.length)return;
+  const meals=[];
+  let totalKcal=0,totalProt=0,totalFat=0,totalFibra=0,count=0;
+  rows.forEach(r=>{
+    const id=r.id.replace('meal-row-','');
+    const kcal=parseFloat(document.getElementById('m-kcal-'+id)?.value)||0;
+    const prot=parseFloat(document.getElementById('m-prot-'+id)?.value)||0;
+    const fat=parseFloat(document.getElementById('m-fat-'+id)?.value)||0;
+    const fibra=parseFloat(document.getElementById('m-fibra-'+id)?.value)||0;
+    const name=document.getElementById('m-name-'+id)?.value||'';
+    const desc=document.getElementById('m-desc-'+id)?.value||'';
+    if(kcal>0){meals.push({name,desc,kcal,prot,fat,fibra});totalKcal+=kcal;totalProt+=prot;totalFat+=fat;totalFibra+=fibra;count++;}
+  });
+  if(!meals.length)return;
+  const nd=getNutriData();
+  const key=nutriDateKey(nutriCurrentDate);
+  if(!nd[key])nd[key]={};
+  nd[key].meals=meals;
+  // Auto-fill totals from meals if not already set
+  if(!nd[key].kcal&&totalKcal){
+    nd[key].kcal=totalKcal;
+    nd[key].prot=count?Math.round(totalProt/count):0;
+    nd[key].fat=count?Math.round(totalFat/count):0;
+    nd[key].fibra=Math.round(totalFibra);
+    document.getElementById('ni-kcal').value=totalKcal;
+    document.getElementById('ni-prot').value=nd[key].prot;
+    document.getElementById('ni-fat').value=nd[key].fat;
+    document.getElementById('ni-fibra').value=nd[key].fibra;
+  }
+  saveNutriData(nd);
+  renderNutri();
+}
+
+function getTarget(){
+  // Get from saved calc inputs
+  const s=getState();
+  const c=s._calcInputs;
+  if(!c)return{kcal:2000,prot:30,fat:25,fibra:25};
+  const bmr=Math.round(10*c.peso+6.25*(c.altura||168)-5*(c.edad||29)+5);
+  const tdee=Math.round(bmr*(c.actFactor||1.375));
+  const runExtra=Math.round((3*estimateRunCalories(c.peso,12,6))/7);
+  const deficit=Math.round((c.objetivo||0.5)*7700/7);
+  const kcal=tdee+runExtra-deficit;
+  return{kcal,prot:30,fat:25,fibra:25};
+}
+
+function renderNutriDaySummary(dayData, target){
+  const el=document.getElementById('nutri-day-summary');
+  if(!dayData||!dayData.kcal){
+    el.innerHTML='<div style="font-family:DM Mono,monospace;font-size:11px;color:var(--muted);text-align:center;padding:10px;">Sin datos para este día</div>';
+    return;
+  }
+  const rows=[
+    {label:'Calorías',consumed:dayData.kcal,target:target.kcal,unit:'kcal',fill:'fill-kcal',color:'var(--accent)'},
+    {label:'Proteína',consumed:dayData.prot,target:target.prot,unit:'%',fill:'fill-prot',color:'#4ade80'},
+    {label:'Grasa',consumed:dayData.fat,target:target.fat,unit:'%',fill:'fill-fat',color:'#fb923c'},
+    {label:'Fibra',consumed:dayData.fibra,target:target.fibra,unit:'g',fill:'fill-fibra',color:'var(--accent2)'},
+  ];
+  el.innerHTML=rows.map(r=>{
+    const pct=Math.min(100,Math.round((r.consumed/r.target)*100));
+    const over=r.consumed>r.target;
+    const barColor=over?'var(--fail)':r.color;
+    return `<div class="summary-row">
+      <span class="summary-label">${r.label}</span>
+      <div class="summary-bar-wrap">
+        <div class="summary-bar-fill ${r.fill}" style="width:${pct}%;background:${barColor}"></div>
+      </div>
+      <span class="summary-vals">${r.consumed}<span>/${r.target}${r.unit}</span></span>
+    </div>`;
+  }).join('');
+
+  // Show meals if available
+  if(dayData.meals&&dayData.meals.length){
+    el.innerHTML+=`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+      ${dayData.meals.map(m=>`<div style="display:flex;justify-content:space-between;padding:4px 0;font-family:DM Mono,monospace;font-size:10px;">
+        <span style="color:var(--muted)">${m.name}${m.desc?' · '+m.desc:''}</span>
+        <span style="color:var(--accent)">${m.kcal} kcal</span>
+      </div>`).join('')}
+    </div>`;
+  }
+}
+
+function renderNutriWeeklyChart(nd, target){
+  const el=document.getElementById('nutri-weekly-chart');
+  // Get last 21 days with data
+  const days=[];
+  for(let i=20;i>=0;i--){
+    const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-i);
+    const key=nutriDateKey(d);
+    const mo=['E','F','M','A','M','J','J','A','S','O','N','D'];
+    days.push({key,label:d.getDate()+''+mo[d.getMonth()],data:nd[key]||null});
+  }
+  const withData=days.filter(d=>d.data);
+  if(withData.length<3){
+    el.innerHTML='<div style="font-family:DM Mono,monospace;font-size:11px;color:var(--muted);text-align:center;padding:20px;">Registrá al menos 3 días para ver la gráfica</div>';
+    return;
+  }
+
+  const W=320,H=80,pad=6;
+  const allKcal=withData.map(d=>d.data.kcal||0);
+  const maxK=Math.max(...allKcal,target.kcal)*1.1;
+  const xStep=(W-pad*2)/(days.length-1);
+  const yS=(k)=>H-pad-(k/maxK)*(H-pad*2);
+
+  // Target line
+  const ty=yS(target.kcal);
+
+  // Bars for consumed
+  const bars=days.map((d,i)=>{
+    if(!d.data||!d.data.kcal)return'';
+    const x=pad+i*xStep;
+    const h=Math.max(2,(d.data.kcal/maxK)*(H-pad*2));
+    const y=H-pad-h;
+    const over=d.data.kcal>target.kcal;
+    const color=over?'var(--fail)':'rgba(232,255,71,.6)';
+    return `<rect x="${x-4}" y="${y}" width="8" height="${h}" rx="2" fill="${color}"/>
+      <text x="${x}" y="${H-1}" text-anchor="middle" font-family="DM Mono" font-size="6" fill="var(--muted)">${d.label}</text>`;
+  }).join('');
+
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H+10}" style="width:100%;overflow:visible">
+    <line x1="${pad}" y1="${ty}" x2="${W-pad}" y2="${ty}" stroke="var(--muted)" stroke-width="1" stroke-dasharray="4,3"/>
+    <text x="${W-pad+2}" y="${ty+3}" font-family="DM Mono" font-size="7" fill="var(--muted)">target</text>
+    ${bars}
+  </svg>`;
+}
+
+function renderNutriAvgs(nd){
+  const el=document.getElementById('nutri-avgs');
+  const vals=Object.values(nd).filter(v=>v&&v.kcal);
+  if(!vals.length)return;
+  const avgKcal=Math.round(vals.reduce((a,v)=>a+(v.kcal||0),0)/vals.length);
+  const avgProt=Math.round(vals.reduce((a,v)=>a+(v.prot||0),0)/vals.length);
+  const avgFat=Math.round(vals.reduce((a,v)=>a+(v.fat||0),0)/vals.length);
+  const avgFibra=Math.round(vals.reduce((a,v)=>a+(v.fibra||0),0)/vals.length);
+  const target=getTarget();
+  const kcalColor=Math.abs(avgKcal-target.kcal)<150?'var(--ok)':avgKcal>target.kcal?'var(--fail)':'var(--accent)';
+  el.innerHTML=`
+    <div class="avg-card"><div class="avg-val" style="color:${kcalColor}">${avgKcal}</div><div class="avg-label">kcal/día</div><div class="avg-sub">target: ${target.kcal} · ${vals.length} días</div></div>
+    <div class="avg-card"><div class="avg-val" style="color:#4ade80">${avgProt}%</div><div class="avg-label">Proteína</div><div class="avg-sub">target: ${target.prot}%</div></div>
+    <div class="avg-card"><div class="avg-val" style="color:#fb923c">${avgFat}%</div><div class="avg-label">Grasa</div><div class="avg-sub">target: ${target.fat}%</div></div>
+    <div class="avg-card"><div class="avg-val" style="color:var(--accent2)">${avgFibra}g</div><div class="avg-label">Fibra</div><div class="avg-sub">target: ${target.fibra}g</div></div>`;
+}
+
+function renderNutri(){
+  const key=nutriDateKey(nutriCurrentDate);
+  document.getElementById('nutri-date-label').textContent=nutriFormatLabel(nutriCurrentDate);
+  const nd=getNutriData();
+  const dayData=nd[key]||null;
+  const target=getTarget();
+
+  // Fill inputs with saved data
+  document.getElementById('ni-kcal').value=dayData?.kcal||'';
+  document.getElementById('ni-prot').value=dayData?.prot||'';
+  document.getElementById('ni-fat').value=dayData?.fat||'';
+  document.getElementById('ni-fibra').value=dayData?.fibra||'';
+
+  // Meals
+  const mealsEl=document.getElementById('meals-rows');
+  mealsEl.innerHTML='';mealRowCount=0;
+  if(dayData?.meals?.length){
+    document.getElementById('meals-section').classList.add('open');
+    dayData.meals.forEach(m=>{
+      mealRowCount++;
+      const id=mealRowCount;
+      const row=document.createElement('div');
+      row.className='meal-row';row.id='meal-row-'+id;
+      const mnames=['Desayuno','Almuerzo','Merienda','Cena','Snack'];
+      const opts=mnames.map(n=>`<option${n===m.name?' selected':''}>${n}</option>`).join('');
+      row.innerHTML=`
+        <select class="meal-input" id="m-name-${id}" style="font-size:10px;">${opts}</select>
+        <input class="meal-input" id="m-desc-${id}" value="${m.desc||''}" style="font-size:10px;">
+        <input class="meal-input" id="m-kcal-${id}" type="number" value="${m.kcal||''}">
+        <input class="meal-input" id="m-prot-${id}" type="number" value="${m.prot||''}">
+        <input class="meal-input" id="m-fat-${id}" type="number" value="${m.fat||''}">
+        <input class="meal-input" id="m-fibra-${id}" type="number" value="${m.fibra||''}">
+        <button class="meal-del" onclick="document.getElementById('meal-row-${id}').remove()">✕</button>`;
+      mealsEl.appendChild(row);
+    });
+  }
+
+  renderNutriDaySummary(dayData,target);
+  renderNutriWeeklyChart(nd,target);
+  renderNutriAvgs(nd);
 }
 
 // ===== INIT =====
