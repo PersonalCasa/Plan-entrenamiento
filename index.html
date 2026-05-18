@@ -222,6 +222,26 @@ svg.chart{width:100%;overflow:visible;}
 
 @media(max-width:400px){.weeks-grid{grid-template-columns:1fr;}}
 
+/* CALORIE CALCULATOR */
+.cal-calc{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px;}
+.calc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.calc-field{display:flex;flex-direction:column;gap:4px;}
+.calc-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;}
+.calc-input{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:7px 10px;font-family:'DM Mono',monospace;font-size:13px;color:var(--text);outline:none;width:100%;}
+.calc-input:focus{border-color:var(--accent);}
+.calc-select{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:7px 10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text);outline:none;width:100%;}
+.calc-btn{width:100%;padding:8px;background:rgba(232,255,71,.1);border:1px solid rgba(232,255,71,.3);border-radius:5px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--accent);cursor:pointer;text-transform:uppercase;margin-bottom:14px;}
+.calc-btn:hover{background:rgba(232,255,71,.2);}
+.calc-results{display:none;flex-direction:column;gap:8px;}
+.calc-results.visible{display:flex;}
+.calc-result-row{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-radius:5px;background:rgba(255,255,255,.02);}
+.calc-result-row.highlight{background:rgba(232,255,71,.06);border:1px solid rgba(232,255,71,.15);}
+.calc-result-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;}
+.calc-result-val{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--accent);line-height:1;}
+.calc-result-val.green{color:var(--ok);}
+.calc-result-val.blue{color:var(--accent2);}
+.calc-note{font-size:11px;color:var(--muted);line-height:1.6;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
+
 /* IMPORT GPX/FIT */
 .import-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;background:rgba(71,196,255,.08);border:1px solid rgba(71,196,255,.25);border-radius:5px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--accent2);cursor:pointer;text-transform:uppercase;transition:background .2s;}
 .import-btn:hover{background:rgba(71,196,255,.18);}
@@ -339,6 +359,67 @@ svg.chart{width:100%;overflow:visible;}
     </div>
     <div class="mini-chart" id="weight-chart">
       <div class="chart-empty">Sin datos aún — registrá tu primer peso</div>
+    </div>
+  </div>
+
+  <div class="stats-section">
+    <div class="stats-section-title">Calculadora calórica</div>
+    <div class="stats-section-sub">TDEE · déficit · gasto por corrida</div>
+    <div class="cal-calc">
+      <div class="calc-grid">
+        <div class="calc-field">
+          <span class="calc-label">Peso (kg)</span>
+          <input class="calc-input" id="cc-peso" type="number" step="0.5" placeholder="72" value="72">
+        </div>
+        <div class="calc-field">
+          <span class="calc-label">Altura (cm)</span>
+          <input class="calc-input" id="cc-altura" type="number" step="1" placeholder="168" value="168">
+        </div>
+        <div class="calc-field">
+          <span class="calc-label">Edad</span>
+          <input class="calc-input" id="cc-edad" type="number" step="1" placeholder="29" value="29">
+        </div>
+        <div class="calc-field">
+          <span class="calc-label">Objetivo</span>
+          <select class="calc-select" id="cc-objetivo">
+            <option value="0.5">Bajar 0.5 kg/sem</option>
+            <option value="0.25">Bajar 0.25 kg/sem</option>
+            <option value="0">Mantener peso</option>
+          </select>
+        </div>
+      </div>
+      <div class="calc-field" style="margin-bottom:14px;">
+        <span class="calc-label">Nivel de actividad (sin contar este plan)</span>
+        <select class="calc-select" id="cc-actividad">
+          <option value="1.2">Sedentario — trabajo de escritorio</option>
+          <option value="1.375" selected>Levemente activo — camino, trabajo de campo</option>
+          <option value="1.55">Moderadamente activo — actividad física regular</option>
+        </select>
+      </div>
+      <button class="calc-btn" onclick="calcTDEE()">Calcular</button>
+      <div class="calc-results" id="cc-results">
+        <div class="calc-result-row">
+          <span class="calc-result-label">Metabolismo basal (BMR)</span>
+          <span class="calc-result-val blue" id="cc-bmr">—</span>
+        </div>
+        <div class="calc-result-row">
+          <span class="calc-result-label">Gasto total diario (TDEE)</span>
+          <span class="calc-result-val" id="cc-tdee">—</span>
+        </div>
+        <div class="calc-result-row highlight">
+          <span class="calc-result-label">Target calórico diario</span>
+          <span class="calc-result-val green" id="cc-target">—</span>
+        </div>
+        <div class="calc-result-row">
+          <span class="calc-result-label">Déficit diario</span>
+          <span class="calc-result-val" id="cc-deficit">—</span>
+        </div>
+        <div class="calc-result-row">
+          <span class="calc-result-label">Calorías quemadas última corrida</span>
+          <span class="calc-result-val blue" id="cc-lastrun">—</span>
+        </div>
+        <div class="calc-note" id="cc-note"></div>
+      </div>
     </div>
   </div>
 
@@ -928,7 +1009,7 @@ function showPage(id,btn){
   document.querySelectorAll('.nav-tab').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
   btn.classList.add('active');
-  if(id==='stats')renderStats();
+  if(id==='stats'){renderStats();restoreCalcInputs();}
 }
 
 // ===== GPX/FIT IMPORT =====
@@ -1244,6 +1325,106 @@ document.addEventListener('DOMContentLoaded',()=>{
     }
   });
 });
+
+// ===== CALORIE CALCULATOR =====
+function calcTDEE(){
+  const peso = parseFloat(document.getElementById('cc-peso').value)||72;
+  const altura = parseFloat(document.getElementById('cc-altura').value)||168;
+  const edad = parseFloat(document.getElementById('cc-edad').value)||29;
+  const actFactor = parseFloat(document.getElementById('cc-actividad').value)||1.375;
+  const objetivo = parseFloat(document.getElementById('cc-objetivo').value)||0.5;
+
+  // Mifflin-St Jeor (male)
+  const bmr = Math.round(10*peso + 6.25*altura - 5*edad + 5);
+  const tdee = Math.round(bmr * actFactor);
+  // Add running plan contribution (~3 sessions/week, avg 400 kcal each → ~170 kcal/day)
+  const runExtra = Math.round((3 * estimateRunCalories(peso, 12, 6)) / 7);
+  const tdeeTotal = tdee + runExtra;
+  const deficit = Math.round(objetivo * 7700 / 7); // 7700 kcal ≈ 1 kg fat
+  const target = tdeeTotal - deficit;
+
+  document.getElementById('cc-bmr').textContent = bmr + ' kcal';
+  document.getElementById('cc-tdee').textContent = tdeeTotal + ' kcal';
+  document.getElementById('cc-target').textContent = target + ' kcal';
+  document.getElementById('cc-deficit').textContent = deficit + ' kcal';
+
+  // Last run calories from stored data
+  const lastRun = getLastRunData();
+  if(lastRun){
+    const kcal = estimateRunCalories(peso, parseFloat(lastRun.distReal||lastRun.km)||0, parseFloat(lastRun.paceMin)||6);
+    document.getElementById('cc-lastrun').textContent = kcal > 0 ? kcal + ' kcal' : '—';
+  } else {
+    document.getElementById('cc-lastrun').textContent = '—';
+  }
+
+  // Note
+  const macroP = Math.round(target * 0.30 / 4);
+  const macroC = Math.round(target * 0.45 / 4);
+  const macroF = Math.round(target * 0.25 / 9);
+  document.getElementById('cc-note').innerHTML =
+    `<strong style="color:var(--text)">Distribución sugerida de macros:</strong><br>
+    🥩 Proteína: ${macroP}g/día (30%) — clave para mantener músculo en déficit<br>
+    🌾 Carbohidratos: ${macroC}g/día (45%) — combustible para las corridas<br>
+    🥑 Grasas: ${macroF}g/día (25%)<br><br>
+    <span style="color:var(--muted)">Los días de fondo largo y pasadas podés sumar 200–300 kcal extra al target.</span>`;
+
+  document.getElementById('cc-results').classList.add('visible');
+
+  // Save inputs to localStorage
+  const s = getState();
+  s._calcInputs = {peso,altura,edad,actFactor,objetivo};
+  saveState(s);
+}
+
+function estimateRunCalories(pesoKg, distKm, paceMinPerKm){
+  // MET-based estimate for running
+  // pace 6 min/km ≈ 10 km/h → MET ~10
+  // pace 5 min/km ≈ 12 km/h → MET ~12
+  // pace 7 min/km ≈ 8.5 km/h → MET ~8.5
+  if(!distKm||distKm<=0)return 0;
+  const speedKmh = paceMinPerKm > 0 ? 60/paceMinPerKm : 10;
+  const MET = Math.max(6, Math.min(16, speedKmh * 1.0));
+  const timeH = distKm / speedKmh;
+  return Math.round(MET * pesoKg * timeH);
+}
+
+function getLastRunData(){
+  const s = getState();
+  let last = null;
+  Object.entries(s).forEach(([key,val])=>{
+    if(key.startsWith('_'))return;
+    if(val?.status==='done'&&(val.distReal||val.km)){
+      const so = getSessObj(key);
+      if(so?.isRun){
+        if(!last||key>last.key) last={...val,key};
+      }
+    }
+  });
+  if(last&&last.pace){
+    const parts=last.pace.split(':');
+    last.paceMin=parseFloat(parts[0])+(parseFloat(parts[1]||0)/60);
+  }
+  return last;
+}
+
+// Restore saved calc inputs on stats page load
+function restoreCalcInputs(){
+  const s=getState();
+  if(!s._calcInputs)return;
+  const c=s._calcInputs;
+  if(c.peso)document.getElementById('cc-peso').value=c.peso;
+  if(c.altura)document.getElementById('cc-altura').value=c.altura;
+  if(c.edad)document.getElementById('cc-edad').value=c.edad;
+  if(c.actFactor){
+    const sel=document.getElementById('cc-actividad');
+    if(sel)sel.value=c.actFactor;
+  }
+  if(c.objetivo!==undefined){
+    const sel=document.getElementById('cc-objetivo');
+    if(sel)sel.value=c.objetivo;
+  }
+  calcTDEE();
+}
 
 // ===== INIT =====
 renderGym(GYM_DAY1,'gym-day1');
