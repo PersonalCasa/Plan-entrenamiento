@@ -162,6 +162,15 @@ main{padding:16px 20px 80px;}
 .rs-sum{font-family:'DM Mono',monospace;font-size:10px;color:var(--ok);margin-top:6px;display:none;}
 .rs-sum.visible{display:block;}
 
+/* SESSION DATE OVERRIDE */
+.sess-date-row{display:none;align-items:center;gap:6px;padding-left:46px;margin-top:4px;}
+.sess-date-row.visible{display:flex;}
+.sess-date-label{font-family:DM Mono,monospace;font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;white-space:nowrap;}
+.sess-date-input{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-family:DM Mono,monospace;font-size:11px;color:var(--text);outline:none;flex:1;}
+.sess-date-input:focus{border-color:var(--accent);}
+.sess-date-info{font-family:DM Mono,monospace;font-size:9px;color:var(--accent);margin-top:2px;display:none;padding-left:46px;}
+.sess-date-info.visible{display:block;}
+
 .card-note{margin:0 12px 8px;padding:4px 8px;border-radius:4px;background:rgba(255,255,255,.02);border:1px dashed var(--border);font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);line-height:1.5;}
 .week-prog{display:flex;align-items:center;gap:6px;padding:6px 12px 8px;border-top:1px solid var(--border);}
 .wp-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;}
@@ -942,6 +951,16 @@ function buildCard(w,isCurrent,isPast){
       <button class="check-btn ${missedCls}" onclick="markSession('${key}','missed')">✗</button>
       <input class="check-input ${noteVis}" id="note-${key}" placeholder="¿Por qué no?" value="${st.note||''}" onblur="saveNote('${key}')">
     </div>
+    ${st.status==='done'?`
+    <div class="sess-date-row visible" id="daterow-${key}">
+      <span class="sess-date-label">📅 Fecha real</span>
+      <input class="sess-date-input" type="date" id="sdate-${key}"
+        value="${st.realDate||''}"
+        onchange="saveSessionDate('${key}',this.value)">
+    </div>
+    <div class="sess-date-info" id="sdateinfo-${key}" style="display:${st.realDate?'block':'none'}">
+      ↪ movida al ${st.realDate?formatDateShort(st.realDate):''}
+    </div>`:''}
     ${s.isRun&&st.status==='done'?`
     <div class="rpe-row visible">
       <span class="rpe-label">RPE</span>
@@ -1123,7 +1142,14 @@ function renderStats(){
     if(key.startsWith('_'))return;
     if(val?.status==='done'&&(val.time||val.distReal)){
       const so=getSessObj(key);
-      if(so?.isRun)runs.push({key,desc:so.desc,km:val.distReal||val.km,time:val.time,pace:val.pace,rpe:val.rpe||0});
+      if(so?.isRun){
+        const wn=parseInt(key.match(/w(\d+)/)[1]);
+        const d=parseInt(key.match(/d(\d+)/)[1]);
+        const planned=getPlannedDate(wn,d);
+        const dateLabel=val.realDate&&val.realDate!==planned?
+          formatDateShort(val.realDate)+' ↪':formatDateShort(planned);
+        runs.push({key,desc:so.desc,km:val.distReal||val.km,time:val.time,pace:val.pace,rpe:val.rpe||0,dateLabel});
+      }
     }
   });
 
@@ -1173,9 +1199,10 @@ function renderStats(){
     return'▸';
   };
   rht.innerHTML=`<table class="run-table">
-    <tr><th></th><th>Sesión</th><th>Dist</th><th>Ritmo</th><th>RPE</th></tr>
+    <tr><th></th><th>Fecha</th><th>Sesión</th><th>Dist</th><th>Ritmo</th><th>RPE</th></tr>
     ${runs.map(r=>`<tr>
       <td style="font-size:14px;text-align:center;">${sessTypeLabel(r.desc)}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);white-space:nowrap;">${r.dateLabel||''}</td>
       <td style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;">${r.desc}</td>
       <td>${r.km?r.km+' km':'-'}</td>
       <td class="td-pace">${r.pace||'-'}</td>
@@ -2230,8 +2257,10 @@ function exportToPDF(){
       var key=sessKey(w.n,sess.d);
       var st=s[key]||{};
       var d=days[sess.d];
+      // Use real date if session was moved
+      var displayDate=st.realDate?st.realDate.split('-').reverse().slice(0,2).join('/'):d.getDate()+'/'+(d.getMonth()+1);
       runs.push({
-        date:d.getDate()+'/'+(d.getMonth()+1),
+        date:displayDate,
         desc:sess.desc,
         km:st.distReal||sess.km||'',
         time:st.time||'—',
@@ -2539,6 +2568,41 @@ function autoSaveDayTotals(){
   nd[key].kcal=kcal;nd[key].prot=prot;nd[key].carb=carb;nd[key].fat=fat;nd[key].fibra=fibra;
   saveNutriData(nd);
   updateDaySummaryPreview(kcal,prot,carb,fat,fibra);
+}
+
+function getPlannedDate(wn,d){
+  const days=weekDays(wn-1);
+  return nutriDateKey(days[d]);
+}
+
+function formatDateShort(dateStr){
+  if(!dateStr)return'';
+  const [y,m,d]=dateStr.split('-');
+  const mo=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  return d+' '+mo[parseInt(m)-1];
+}
+
+function saveSessionDate(key,dateStr){
+  const s=getState();
+  if(!s[key])return;
+  s[key].realDate=dateStr;
+  saveState(s);
+  // Update info label
+  const so=getSessObj(key);
+  const wn=parseInt(key.match(/w(\d+)/)[1]);
+  const d=parseInt(key.match(/d(\d+)/)[1]);
+  const planned=getPlannedDate(wn,d);
+  const infoEl=document.getElementById('sdateinfo-'+key);
+  if(infoEl){
+    if(dateStr&&dateStr!==planned){
+      infoEl.textContent='↪ movida al '+formatDateShort(dateStr);
+      infoEl.classList.add('visible');
+    } else {
+      infoEl.classList.remove('visible');
+    }
+  }
+  updateStats();
+  renderStats();
 }
 
 // ===== INIT =====
