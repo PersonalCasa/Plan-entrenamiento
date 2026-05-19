@@ -168,8 +168,7 @@ main{padding:16px 20px 80px;}
 .sess-date-label{font-family:DM Mono,monospace;font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;white-space:nowrap;}
 .sess-date-input{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-family:DM Mono,monospace;font-size:11px;color:var(--text);outline:none;flex:1;}
 .sess-date-input:focus{border-color:var(--accent);}
-.sess-date-info{font-family:DM Mono,monospace;font-size:9px;color:var(--accent);margin-top:2px;display:none;padding-left:46px;}
-.sess-date-info.visible{display:block;}
+
 
 .card-note{margin:0 12px 8px;padding:4px 8px;border-radius:4px;background:rgba(255,255,255,.02);border:1px dashed var(--border);font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);line-height:1.5;}
 .week-prog{display:flex;align-items:center;gap:6px;padding:6px 12px 8px;border-top:1px solid var(--border);}
@@ -311,7 +310,7 @@ svg.chart{width:100%;overflow:visible;}
 .legend-dot-small{width:8px;height:8px;border-radius:50%;}
 
 /* AVERAGES */
-.avg-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;} .avg-grid>.avg-card:first-child{grid-column:span 2;}
+.avg-grid{display:flex;flex-direction:column;gap:8px;}
 .avg-card{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:10px 12px;}
 .avg-val{font-family:'Bebas Neue',sans-serif;font-size:26px;line-height:1;}
 .avg-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-top:2px;}
@@ -610,7 +609,7 @@ function isCurrentWeek(i){return TODAY>=weekStart(i)&&TODAY<=weekEnd(i);}
 function isPastWeek(i){return TODAY>weekEnd(i);}
 
 const WEEKS=[
-  {n:1,phase:'base',type:'A',vol:15,pct:58,note:'S1: Mar 19, Jue 21, Dom 24.',
+  {n:1,phase:'base',type:'A',vol:15,pct:58,
    sess:[{d:1,cls:'run-long',icon:'🏃',desc:'Fondo largo suave Z2',km:'15 km',isRun:true,gymDay:null},
          {d:3,cls:'gym',icon:'🏋️',desc:'Gym — Tren inferior',km:'',isRun:false,gymDay:'day1'},
          {d:5,cls:'gym',icon:'🏋️',desc:'Gym — Tren superior',km:'',isRun:false,gymDay:'day2'}]},
@@ -622,7 +621,7 @@ const WEEKS=[
    sess:[{d:1,cls:'run-long',icon:'🏃',desc:'Fondo largo Z2',km:'16 km',isRun:true,gymDay:null},
          {d:3,cls:'gym',icon:'🏋️',desc:'Gym — Tren inferior',km:'',isRun:false,gymDay:'day1'},
          {d:5,cls:'gym',icon:'🏋️',desc:'Gym — Tren superior',km:'',isRun:false,gymDay:'day2'}]},
-  {n:4,phase:'base',type:'B',vol:19,pct:73,note:'Semana de recuperación.',
+  {n:4,phase:'base',type:'B',vol:19,pct:73,note:'Recuperación.',
    sess:[{d:1,cls:'run-short',icon:'⚡',desc:'Pasadas 5×500m Z4 + calentamiento',km:'10 km',isRun:true,gymDay:null},
          {d:3,cls:'gym',icon:'🏋️',desc:'Gym — Full body liviano',km:'',isRun:false,gymDay:'full'},
          {d:6,cls:'run-short',icon:'🔄',desc:'Fondo corto regenerativo Z1–2',km:'9 km',isRun:true,gymDay:null}]},
@@ -638,7 +637,7 @@ const WEEKS=[
    sess:[{d:1,cls:'run-long',icon:'🏃',desc:'Fondo largo Z2',km:'18 km',isRun:true,gymDay:null},
          {d:3,cls:'gym',icon:'🏋️',desc:'Gym — Tren inferior',km:'',isRun:false,gymDay:'day1'},
          {d:5,cls:'gym',icon:'🏋️',desc:'Gym — Tren superior',km:'',isRun:false,gymDay:'day2'}]},
-  {n:8,phase:'build1',type:'B',vol:21,pct:81,note:'Semana de recuperación.',
+  {n:8,phase:'build1',type:'B',vol:21,pct:81,note:'Recuperación.',
    sess:[{d:1,cls:'run-short',icon:'⚡',desc:'Pasadas 5×600m Z4 + calentamiento',km:'11 km',isRun:true,gymDay:null},
          {d:3,cls:'gym',icon:'🏋️',desc:'Gym — Full body liviano',km:'',isRun:false,gymDay:'full'},
          {d:6,cls:'run-short',icon:'🔄',desc:'Fondo corto regenerativo Z1–2',km:'10 km',isRun:true,gymDay:null}]},
@@ -972,7 +971,6 @@ function buildCard(w,isCurrent,isPast){
 
     return `
     <div class="session ${s.cls}">
-      <span class="s-day">${DAY_NAMES[s.d]}</span>
       <span class="s-icon">${s.icon}</span>
       <span class="s-desc">${s.desc}</span>
       ${s.km?`<span class="s-km">${s.km}</span>`:''}
@@ -990,9 +988,7 @@ function buildCard(w,isCurrent,isPast){
         value="${st.realDate||''}"
         onchange="saveSessionDate('${key}',this.value)">
     </div>
-    <div class="sess-date-info" id="sdateinfo-${key}" style="display:${st.realDate?'block':'none'}">
-      ↪ movida al ${st.realDate?formatDateShort(st.realDate):''}
-    </div>`:''}
+`:''}
     ${s.isRun&&st.status==='done'?`
     <div class="rpe-row visible">
       <span class="rpe-label">RPE</span>
@@ -1996,49 +1992,7 @@ function renderNutriDaySummary(dayData, target, dateStr){
   el.innerHTML+=`<button class="del-day-btn" onclick="deleteNutriDay('${delKey}')">🗑 Borrar registro de este día</button>`;
 }
 
-function renderNutriWeeklyChart(nd, target){
-  const el=document.getElementById('nutri-weekly-chart');
-  // Get last 21 days with data
-  const days=[];
-  for(let i=20;i>=0;i--){
-    const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-i);
-    const key=nutriDateKey(d);
-    const mo=['E','F','M','A','M','J','J','A','S','O','N','D'];
-    days.push({key,label:d.getDate()+''+mo[d.getMonth()],data:nd[key]||null});
-  }
-  const withData=days.filter(d=>d.data);
-  if(withData.length<3){
-    el.innerHTML='<div style="font-family:DM Mono,monospace;font-size:11px;color:var(--muted);text-align:center;padding:20px;">Registrá al menos 3 días para ver la gráfica</div>';
-    return;
-  }
 
-  const W=320,H=80,pad=6;
-  const allKcal=withData.map(d=>d.data.kcal||0);
-  const maxK=Math.max(...allKcal,target.kcal)*1.1;
-  const xStep=(W-pad*2)/(days.length-1);
-  const yS=(k)=>H-pad-(k/maxK)*(H-pad*2);
-
-  // Target line
-  const ty=yS(target.kcal);
-
-  // Bars for consumed
-  const bars=days.map((d,i)=>{
-    if(!d.data||!d.data.kcal)return'';
-    const x=pad+i*xStep;
-    const h=Math.max(2,(d.data.kcal/maxK)*(H-pad*2));
-    const y=H-pad-h;
-    const over=d.data.kcal>target.kcal;
-    const color=over?'var(--fail)':'rgba(232,255,71,.6)';
-    return `<rect x="${x-4}" y="${y}" width="8" height="${h}" rx="2" fill="${color}"/>
-      <text x="${x}" y="${H-1}" text-anchor="middle" font-family="DM Mono" font-size="6" fill="var(--muted)">${d.label}</text>`;
-  }).join('');
-
-  el.innerHTML=`<svg viewBox="0 0 ${W} ${H+10}" style="width:100%;overflow:visible">
-    <line x1="${pad}" y1="${ty}" x2="${W-pad}" y2="${ty}" stroke="var(--muted)" stroke-width="1" stroke-dasharray="4,3"/>
-    <text x="${W-pad+2}" y="${ty+3}" font-family="DM Mono" font-size="7" fill="var(--muted)">target</text>
-    ${bars}
-  </svg>`;
-}
 
 function renderNutriAvgs(nd){
   const el=document.getElementById('nutri-avgs');
@@ -2050,12 +2004,37 @@ function renderNutriAvgs(nd){
   const avgFibra=Math.round(vals.reduce((a,v)=>a+(v.fibra||0),0)/vals.length);
   const target=getTarget();
   const kcalColor=Math.abs(avgKcal-target.kcal)<150?'var(--ok)':avgKcal>target.kcal?'var(--fail)':'var(--accent)';
-  el.innerHTML=`
-    <div class="avg-card"><div class="avg-val" style="color:${kcalColor}">${avgKcal}</div><div class="avg-label">kcal/día</div><div class="avg-sub">target descanso: ${getTarget(null).kcal}</div></div>
-    <div class="avg-card"><div class="avg-val" style="color:#4ade80">${avgProt}g</div><div class="avg-label">Proteína</div><div class="avg-sub">target: ${target.prot}g</div></div>
-    <div class="avg-card"><div class="avg-val" style="color:#fbbf24">${avgCarb}g</div><div class="avg-label">Carbohidratos</div><div class="avg-sub">target: ${target.carb}g</div></div>
-    <div class="avg-card"><div class="avg-val" style="color:#fb923c">${avgFat}g</div><div class="avg-label">Grasa</div><div class="avg-sub">target: ${target.fat}g</div></div>
-    <div class="avg-card"><div class="avg-val" style="color:var(--accent2)">${avgFibra}g</div><div class="avg-label">Fibra</div><div class="avg-sub">target: ${target.fibra}g</div></div>`;
+  const tgt=getTarget(null);
+  const daysLabel=vals.length+' día'+(vals.length!==1?'s':'');
+
+  function avgCard(val,tgtVal,unit,label,color){
+    const pct=tgtVal>0?Math.round(val/tgtVal*100):0;
+    const barColor=pct>110?'var(--fail)':pct>=85?'var(--ok)':'var(--accent2)';
+    const diff=val-tgtVal;
+    const diffStr=(diff>=0?'+':'')+Math.round(diff)+unit;
+    const diffColor=Math.abs(diff)/tgtVal<0.15?'var(--ok)':diff>0?'var(--fail)':'var(--accent2)';
+    return '<div class="avg-card">'+
+      '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">'+
+        '<span style="font-family:Bebas Neue,sans-serif;font-size:26px;color:'+color+';line-height:1;">'+val+'<span style="font-size:14px;">'+unit+'</span></span>'+
+        '<span style="font-family:DM Mono,monospace;font-size:10px;color:'+diffColor+';">'+diffStr+'</span>'+
+      '</div>'+
+      '<div style="height:4px;background:var(--border);border-radius:2px;margin-bottom:6px;overflow:hidden;">'+
+        '<div style="height:100%;width:'+Math.min(pct,100)+'%;background:'+barColor+';border-radius:2px;"></div>'+
+      '</div>'+
+      '<div style="display:flex;justify-content:space-between;">'+
+        '<span style="font-family:DM Mono,monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">'+label+'</span>'+
+        '<span style="font-family:DM Mono,monospace;font-size:9px;color:var(--muted);">/ '+tgtVal+unit+'</span>'+
+      '</div>'+
+    '</div>';
+  }
+
+  el.innerHTML=
+    '<div style="font-family:DM Mono,monospace;font-size:10px;color:var(--muted);margin-bottom:10px;letter-spacing:1px;">'+daysLabel+' completados — días de hoy excluidos</div>'+
+    avgCard(avgKcal,tgt.kcal,'kcal','Calorías',kcalColor)+
+    avgCard(avgProt,tgt.prot,'g','Proteína','#4ade80')+
+    avgCard(avgCarb,tgt.carb,'g','Carbohidratos','#fbbf24')+
+    avgCard(avgFat,tgt.fat,'g','Grasa','#fb923c')+
+    avgCard(avgFibra,tgt.fibra,'g','Fibra','var(--accent2)');
 }
 
 function renderNutri(){
@@ -2097,7 +2076,6 @@ function renderNutri(){
   }
 
   renderNutriDaySummary(dayData,target,key);
-  renderNutriWeeklyChart(nd,target);
   renderNutriAvgs(nd);
   renderFoodHistoryList();
 }
@@ -2312,7 +2290,8 @@ function exportToPDF(){
   var totalKmDone=runs.filter(function(r){return r.status==='done';}).reduce(function(a,r){return a+(parseFloat(r.km)||0);},0);
 
   // ── Nutrition averages ──
-  var nutriVals=Object.values(nd).filter(function(v){return v&&v.kcal;});
+  var todayPdf=(new Date()).toISOString().split('T')[0];
+  var nutriVals=Object.entries(nd).filter(function(e){return e[1]&&e[1].kcal&&e[0]!==todayPdf;}).map(function(e){return e[1];});
   var avgKcal=nutriVals.length?Math.round(nutriVals.reduce(function(a,v){return a+(v.kcal||0);},0)/nutriVals.length):null;
   var avgProt=nutriVals.length?Math.round(nutriVals.reduce(function(a,v){return a+(v.prot||0);},0)/nutriVals.length):null;
   var avgCarb=nutriVals.length?Math.round(nutriVals.reduce(function(a,v){return a+(v.carb||0);},0)/nutriVals.length):null;
@@ -2646,6 +2625,13 @@ renderGym(GYM_STRETCH,'gym-stretch');
 render();
 initNotifBtn();
 preloadFoodHistory();
+
+// Load Chart.js for stats page
+if(!window.Chart){
+  var chartScript=document.createElement('script');
+  chartScript.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js';
+  document.head.appendChild(chartScript);
+}
 
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
