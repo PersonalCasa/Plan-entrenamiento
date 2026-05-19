@@ -913,11 +913,35 @@ function buildCard(w,isCurrent,isPast){
   const sMap={};w.sess.forEach(s=>sMap[s.d]=s);
   const state=getState();
 
+  // Build a map of realDate overrides for this week's sessions
+  const realDateMap={};
+  w.sess.forEach(s=>{
+    const k=sessKey(w.n,s.d);
+    const st=state[k]||{};
+    if(st.realDate){
+      // Find which day index the real date falls on in this week
+      const rd=new Date(st.realDate);rd.setHours(0,0,0,0);
+      days.forEach((d,di)=>{
+        const dd=new Date(d);dd.setHours(0,0,0,0);
+        if(dd.getTime()===rd.getTime()) realDateMap[di]={...s,movedFrom:s.d};
+      });
+    }
+  });
+
   const cal=DAY_NAMES.map((name,di)=>{
-    const s=sMap[di];
+    // Check if a session was moved TO this day
+    const movedHere=realDateMap[di];
+    // Original session on this day (only show if NOT moved away)
+    const origSess=sMap[di];
+    const k=origSess?sessKey(w.n,origSess.d):null;
+    const st=k?state[k]||{}:{};
+    const movedAway=origSess&&st.realDate&&st.realDate!==nutriDateKey(days[di]);
+
+    const s=movedHere||(!movedAway?origSess:null);
     const pc=s?PIP_CLS[s.cls]||'pip-empty':'pip-empty';
     const pi=s?PIP_ICO[s.cls]||'':'';
-    return `<div class="cal-day"><span class="cdn">${name}</span><span class="cdd">${days[di].getDate()}</span><div class="cal-pip ${pc}">${pi}</div></div>`;
+    const movedStyle=movedHere&&!origSess?'opacity:.7;outline:1px dashed var(--accent2);border-radius:50%;':'';
+    return `<div class="cal-day"><span class="cdn">${name}</span><span class="cdd">${days[di].getDate()}</span><div class="cal-pip ${pc}" style="${movedStyle}">${pi}</div></div>`;
   }).join('');
 
   const sess=w.sess.map(s=>{
