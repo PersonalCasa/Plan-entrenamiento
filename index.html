@@ -449,21 +449,6 @@ svg.chart{width:100%;overflow:visible;}
   </div>
 
   <div class="stats-section">
-    <div class="stats-section-title">Importar actividad</div>
-    <div class="stats-section-sub">GPX o FIT desde Zepp / Garmin / Strava</div>
-    <label class="import-drop" id="import-drop-zone">
-      <input type="file" id="import-file-stats" accept=".gpx,.tcx,.fit" onchange="handleImportFile(this,'stats-log')">
-      <div class="import-drop-icon">📂</div>
-      <div class="import-drop-label">Tocá para subir el archivo</div>
-      <div class="import-drop-sub">Soporta .gpx .tcx .fit · Zepp, Garmin, Strava</div>
-    </label>
-    <div class="import-log" id="stats-log"></div>
-    <div style="margin-bottom:10px;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);">
-      En Zepp: Actividad → ··· → Exportar datos → Formato GPX (recomendado)
-    </div>
-  </div>
-
-  <div class="stats-section">
     <div class="stats-section-title">Peso corporal</div>
     <div class="stats-section-sub">Registro semanal — kg</div>
     <div class="weight-form">
@@ -550,19 +535,6 @@ svg.chart{width:100%;overflow:visible;}
     <div class="nutri-sub">Necesario vs consumido</div>
     <div class="day-summary" id="nutri-day-summary">
       <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-align:center;padding:10px;">Sin datos para este día</div>
-    </div>
-  </div>
-
-  <!-- Weekly chart -->
-  <div class="nutri-section">
-    <div class="nutri-title">Últimas 3 semanas</div>
-    <div class="nutri-sub">Calorías consumidas vs target</div>
-    <div class="nutri-chart-wrap">
-      <div class="chart-legend">
-        <div class="legend-item-small"><div class="legend-dot-small" style="background:var(--accent)"></div>Consumido</div>
-        <div class="legend-item-small"><div class="legend-dot-small" style="background:var(--border);border:1px dashed var(--muted)"></div>Target</div>
-      </div>
-      <div id="nutri-weekly-chart"><div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-align:center;padding:20px;">Registrá al menos 3 días para ver la gráfica</div></div>
     </div>
   </div>
 
@@ -850,7 +822,10 @@ function updateStats(){
   Object.values(s).forEach(v=>{
     if(v?.status==='done'){sessions++;km+=parseFloat(v.distReal)||parseFloat(v.km)||0;}
   });
-  const pct=Math.min(100,Math.round(km/TOTAL_KM*100));
+  // Count total planned sessions
+  let totalSess=0;
+  WEEKS.forEach(w=>totalSess+=w.sess.length);
+  const pct=totalSess>0?Math.min(100,Math.round(sessions/totalSess*100)):0;
   document.getElementById('stat-done-val').textContent=sessions;
   document.getElementById('stat-km-val').textContent=km%1===0?km:km.toFixed(1);
   document.getElementById('stat-plan-pct').textContent=pct+'%';
@@ -1967,14 +1942,22 @@ function renderNutriDaySummary(dayData, target, dateStr){
   ];
   el.innerHTML=rows.map(r=>{
     const pct=Math.min(100,Math.round((r.consumed/r.target)*100));
-    const over=r.consumed>r.target;
-    const barColor=over?'var(--fail)':r.color;
+    const diff=r.consumed-r.target;
+    const diffPct=Math.round(Math.abs(diff)/r.target*100);
+    let status,statusColor;
+    if(Math.abs(diff)/r.target<=0.10){status='justo';statusColor='var(--ok)';}
+    else if(diff>0){status='+'+Math.abs(Math.round(diff))+r.unit+' pasado';statusColor='var(--fail)';}
+    else{status='-'+Math.abs(Math.round(diff))+r.unit+' faltante';statusColor='var(--accent2)';}
+    const barColor=diff>r.target*0.10?'var(--fail)':r.color;
     return `<div class="summary-row">
       <span class="summary-label">${r.label}</span>
       <div class="summary-bar-wrap">
         <div class="summary-bar-fill ${r.fill}" style="width:${pct}%;background:${barColor}"></div>
       </div>
-      <span class="summary-vals">${r.consumed}<span>/${r.target}${r.unit}</span></span>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;min-width:110px;">
+        <span class="summary-vals">${r.consumed}<span>/${r.target}${r.unit}</span></span>
+        <span style="font-family:DM Mono,monospace;font-size:9px;color:${statusColor};">${status}</span>
+      </div>
     </div>`;
   }).join('');
 
@@ -2011,12 +1994,15 @@ function renderNutriAvgs(nd){
     const pct=tgtVal>0?Math.round(val/tgtVal*100):0;
     const barColor=pct>110?'var(--fail)':pct>=85?'var(--ok)':'var(--accent2)';
     const diff=val-tgtVal;
-    const diffStr=(diff>=0?'+':'')+Math.round(diff)+unit;
-    const diffColor=Math.abs(diff)/tgtVal<0.15?'var(--ok)':diff>0?'var(--fail)':'var(--accent2)';
+    let statusLabel,diffColor;
+    if(Math.abs(diff)/tgtVal<=0.10){statusLabel='justo ✓';diffColor='var(--ok)';}
+    else if(diff>0){statusLabel=(diff>=0?'+':'')+Math.round(diff)+unit+' pasado';diffColor='var(--fail)';}
+    else{statusLabel=Math.round(diff)+unit+' faltante';diffColor='var(--accent2)';}
+    const diffStr=statusLabel;
     return '<div class="avg-card">'+
       '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">'+
         '<span style="font-family:Bebas Neue,sans-serif;font-size:26px;color:'+color+';line-height:1;">'+val+'<span style="font-size:14px;">'+unit+'</span></span>'+
-        '<span style="font-family:DM Mono,monospace;font-size:10px;color:'+diffColor+';">'+diffStr+'</span>'+
+        '<span style="font-family:DM Mono,monospace;font-size:10px;color:'+diffColor+';">'+statusLabel+'</span>'+
       '</div>'+
       '<div style="height:4px;background:var(--border);border-radius:2px;margin-bottom:6px;overflow:hidden;">'+
         '<div style="height:100%;width:'+Math.min(pct,100)+'%;background:'+barColor+';border-radius:2px;"></div>'+
@@ -2261,6 +2247,7 @@ function exportToPDF(){
 
   // ── Completed runs ──
   const runs=[];
+  var paceRunsWithPace=[];
   WEEKS.forEach(function(w){
     var days=weekDays(w.n-1);
     w.sess.filter(function(se){return se.isRun;}).forEach(function(sess){
@@ -2269,6 +2256,7 @@ function exportToPDF(){
       var d=days[sess.d];
       // Use real date if session was moved
       var displayDate=st.realDate?st.realDate.split('-').reverse().slice(0,2).join('/'):d.getDate()+'/'+(d.getMonth()+1);
+      if(st.pace&&st.pace!=='—') paceRunsWithPace.push({desc:sess.desc,pace:st.pace,date:displayDate});
       runs.push({
         date:displayDate,
         desc:sess.desc,
@@ -2412,7 +2400,7 @@ function exportToPDF(){
     '<div class="kpi"><div class="kpi-val" style="color:#e8ff47">'+doneSessions+'</div><div class="kpi-label">Sesiones completadas</div></div>'+
     '<div class="kpi red"><div class="kpi-val" style="color:#f87171">'+missedSessions+'</div><div class="kpi-label">Sesiones no realizadas</div></div>'+
     '<div class="kpi blue"><div class="kpi-val" style="color:#47c4ff">'+totalKmDone.toFixed(1)+'</div><div class="kpi-label">Km corridos</div></div>'+
-    '<div class="kpi green"><div class="kpi-val" style="color:#4ade80">'+Math.round(totalKmDone/470*100)+'%</div><div class="kpi-label">Del volumen total</div><div class="kpi-sub">Meta: 470 km</div></div>'+
+    '<div class="kpi green"><div class="kpi-val" style="color:#4ade80">'+completedPct+'%</div><div class="kpi-label">Sesiones completadas</div><div class="kpi-sub">'+doneSessions+' de '+totalSessions+'</div></div>'+
     '</div></div></div>'+
 
     // RUNS
@@ -2443,6 +2431,32 @@ function exportToPDF(){
     '</div>':'')+ 
 
     // NUTRITION AVERAGES
+    // Weight chart SVG for PDF
+    (weights.length>=2?
+    '<div class="section">'+
+    '<h3>⚖️ Evolución de peso</h3>'+
+    '<div style="margin-bottom:8px;display:flex;gap:24px;">'+
+    '<div class="kpi blue" style="flex:1"><div class="kpi-val" style="color:#47c4ff">'+weights[0].kg+'kg</div><div class="kpi-label">Inicio ('+weights[0].date+')</div></div>'+
+    '<div class="kpi blue" style="flex:1"><div class="kpi-val" style="color:#47c4ff">'+weights[weights.length-1].kg+'kg</div><div class="kpi-label">Actual ('+weights[weights.length-1].date+')</div></div>'+
+    '<div class="kpi '+(parseFloat((weights[weights.length-1].kg-weights[0].kg).toFixed(1))<=0?'green':'red')+'" style="flex:1">'+
+    '<div class="kpi-val" style="color:'+(parseFloat((weights[weights.length-1].kg-weights[0].kg).toFixed(1))<=0?'#4ade80':'#f87171')+'">'+(parseFloat((weights[weights.length-1].kg-weights[0].kg).toFixed(1))<=0?'▼ ':'▲ ')+Math.abs(weights[weights.length-1].kg-weights[0].kg).toFixed(1)+'kg</div>'+
+    '<div class="kpi-label">Variación</div></div>'+
+    '</div>'+
+    '<div style="position:relative;width:100%;height:200px;"><canvas id="pdfWeightChart" role="img" aria-label="Peso corporal">'+weights.map(function(w){return w.date+': '+w.kg+'kg';}).join(', ')+'</canvas></div>'+
+    '</div>':'')+ 
+
+    // Pace chart for PDF
+    (paceRunsWithPace&&paceRunsWithPace.length>=2?
+    '<div class="section">'+
+    '<h3>🏃 Evolución de ritmo por tipo de sesión</h3>'+
+    '<div style="display:flex;gap:16px;font-size:11px;color:#888;margin-bottom:8px;">'+
+    '<span style="display:flex;align-items:center;gap:4px;"><span style="width:16px;height:2px;background:#185fa5;display:inline-block;"></span>Fondo largo</span>'+
+    '<span style="display:flex;align-items:center;gap:4px;"><span style="width:16px;height:2px;background:#5dcaa5;display:inline-block;border-top:2px dashed #5dcaa5;"></span>Fondo corto</span>'+
+    '<span style="display:flex;align-items:center;gap:4px;"><span style="width:16px;height:2px;background:#ba7517;display:inline-block;border-top:2px dashed #ba7517;"></span>Pasadas/tempo</span>'+
+    '</div>'+
+    '<div style="position:relative;width:100%;height:200px;"><canvas id="pdfPaceChart" role="img" aria-label="Ritmo por tipo de sesion">Ritmo de corridas a lo largo del plan.</canvas></div>'+
+    '</div>':'')+ 
+
     (avgKcal?
     '<div class="section">'+
     '<h3>🥗 Nutrición — Promedios ('+nutriVals.length+' días registrados)</h3>'+
@@ -2459,7 +2473,53 @@ function exportToPDF(){
   var win=window.open('','_blank');
   win.document.write(html);
   win.document.close();
-  setTimeout(function(){win.print();},800);
+  setTimeout(function(){
+    // Init weight chart in PDF
+    if(weights.length>=2){
+      var wEl=win.document.getElementById('pdfWeightChart');
+      if(wEl&&win.Chart){
+        var wKgs=weights.map(function(w){return w.kg;});
+        var wMin=Math.min.apply(null,wKgs)-1,wMax=Math.max.apply(null,wKgs)+1;
+        new win.Chart(wEl,{type:'line',
+          data:{labels:weights.map(function(w){return w.date.slice(5);}),
+            datasets:[{label:'Peso',data:wKgs,borderColor:'#47c4ff',backgroundColor:'rgba(71,196,255,0.08)',
+              pointBackgroundColor:'#47c4ff',pointRadius:5,tension:0.3,fill:true}]},
+          options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+            scales:{x:{ticks:{font:{size:10}}},y:{min:wMin,max:wMax,ticks:{callback:function(v){return v+'kg';},font:{size:10}}}}}});
+      }
+    }
+    // Init pace chart in PDF
+    if(paceRunsWithPace&&paceRunsWithPace.length>=2){
+      var pEl=win.document.getElementById('pdfPaceChart');
+      if(pEl&&win.Chart){
+        var fmtP=function(p){var pt=p.split(':');return parseFloat(pt[0])+(parseFloat(pt[1]||0)/60);};
+        var fmtL=function(v){var m=Math.floor(v);var s=Math.round((v-m)*60);return m+':'+(s<10?'0':'')+s;};
+        var longP=[],shortP=[],intP=[];
+        paceRunsWithPace.forEach(function(r){
+          var pv=fmtP(r.pace);
+          var t=(r.desc.includes('largo')||r.desc.includes('MÁXIMO')||r.desc.includes('moderado'))?'long':
+               (r.desc.includes('Pasadas')||r.desc.includes('pasadas')||r.desc.includes('Tempo')||r.desc.includes('tempo'))?'int':'short';
+          if(t==='long')longP.push({date:r.date,pace:pv});
+          else if(t==='int')intP.push({date:r.date,pace:pv});
+          else shortP.push({date:r.date,pace:pv});
+        });
+        var allDates=[].concat(longP,shortP,intP).map(function(r){return r.date;}).filter(function(v,i,a){return a.indexOf(v)===i;}).sort();
+        new win.Chart(pEl,{type:'line',
+          data:{labels:allDates,datasets:[
+            {label:'Fondo largo',data:allDates.map(function(d){var f=longP.find(function(r){return r.date===d;});return f?f.pace:null;}),
+             borderColor:'#185fa5',pointBackgroundColor:'#185fa5',pointRadius:5,tension:0.3,spanGaps:false,fill:false},
+            {label:'Fondo corto',data:allDates.map(function(d){var f=shortP.find(function(r){return r.date===d;});return f?f.pace:null;}),
+             borderColor:'#5dcaa5',pointBackgroundColor:'#5dcaa5',pointRadius:5,tension:0.3,spanGaps:false,fill:false,borderDash:[4,3]},
+            {label:'Pasadas',data:allDates.map(function(d){var f=intP.find(function(r){return r.date===d;});return f?f.pace:null;}),
+             borderColor:'#ba7517',pointBackgroundColor:'#ba7517',pointRadius:5,tension:0.3,spanGaps:false,fill:false,borderDash:[5,3]},
+          ]},
+          options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+            scales:{x:{ticks:{font:{size:10}}},
+              y:{reverse:true,ticks:{callback:fmtL,font:{size:10}},min:4.0,max:7.5}}}});
+      }
+    }
+    setTimeout(function(){win.print();},600);
+  },800);
 }
 
 function preloadFoodHistory(){
