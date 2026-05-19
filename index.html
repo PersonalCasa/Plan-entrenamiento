@@ -2042,23 +2042,7 @@ function renderNutri(){
   mealsEl.innerHTML='';mealRowCount=0;
   if(dayData?.meals?.length){
     document.getElementById('meals-section').classList.add('open');
-    dayData.meals.forEach(m=>{
-      mealRowCount++;
-      const id=mealRowCount;
-      const row=document.createElement('div');
-      row.className='meal-row-mobile';row.id='meal-row-'+id;
-      const mnames=['Desayuno','Almuerzo','Merienda','Cena','Snack'];
-      const opts=mnames.map(n=>`<option${n===m.name?' selected':''}>${n}</option>`).join('');
-      row.innerHTML=`
-        <select class="meal-input" id="m-name-${id}" style="font-size:10px;">${opts}</select>
-        <input class="meal-input" id="m-desc-${id}" value="${m.desc||''}" style="font-size:10px;">
-        <input class="meal-input" id="m-kcal-${id}" type="number" value="${m.kcal||''}">
-        <input class="meal-input" id="m-prot-${id}" type="number" value="${m.prot||''}">
-        <input class="meal-input" id="m-fat-${id}" type="number" value="${m.fat||''}">
-        <input class="meal-input" id="m-fibra-${id}" type="number" value="${m.fibra||''}">
-        <button class="meal-del" onclick="document.getElementById('meal-row-${id}').remove()">✕</button>`;
-      mealsEl.appendChild(row);
-    });
+    dayData.meals.forEach(m=>addMealRow(m));
   }
 
   renderNutriDaySummary(dayData,target,key);
