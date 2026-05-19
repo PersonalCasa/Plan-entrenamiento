@@ -2271,7 +2271,7 @@ function exportToPDF(){
 
   // ── Training progress ──
   var totalSessions=0;
-  WEEKS.forEach(function(w){w.sess.forEach(function(){totalSessions++;});});
+  WEEKS.forEach(function(w){totalSessions+=w.sess.length;});
   var doneSessions=Object.values(s).filter(function(v){return v&&v.status==='done';}).length;
   var missedSessions=Object.values(s).filter(function(v){return v&&v.status==='missed';}).length;
   var completedPct=totalSessions>0?Math.round(doneSessions/totalSessions*100):0;
