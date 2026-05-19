@@ -594,7 +594,7 @@ const PIP_CLS={'run-long':'pip-run-long','run-short':'pip-run-short','gym':'pip-
 const PIP_ICO={'run-long':'🏃','run-short':'⚡','gym':'💪','race-day':'🏁'};
 const TYPE_CLS={A:'type-A',B:'type-B',taper:'type-taper',race:'type-race'};
 const TYPE_LBL={A:'SEMANA A',B:'SEMANA B',taper:'TAPER',race:'CARRERA'};
-const TOTAL_KM=470;
+const TOTAL_KM=311.1;
 
 function weekDays(i){const[y,m,d]=MONDAYS[i];return Array.from({length:7},(_,j)=>new Date(y,m,d+j));}
 function dateRange(i){
@@ -610,67 +610,67 @@ function isCurrentWeek(i){return TODAY>=weekStart(i)&&TODAY<=weekEnd(i);}
 function isPastWeek(i){return TODAY>weekEnd(i);}
 
 const WEEKS=[
-  {n:1,phase:'base',type:'A',vol:24,pct:20,note:'S1: Mar 19, Jue 21, Dom 24.',
+  {n:1,phase:'base',type:'A',vol:15,pct:58,note:'S1: Mar 19, Jue 21, Dom 24.',
    sess:[{d:1,cls:'run-long',icon:'🏃',desc:'Fondo largo suave Z2',km:'15 km',isRun:true,gymDay:null},
          {d:3,cls:'gym',icon:'🏋️',desc:'Gym — Tren inferior',km:'',isRun:false,gymDay:'day1'},
          {d:5,cls:'gym',icon:'🏋️',desc:'Gym — Tren superior',km:'',isRun:false,gymDay:'day2'}]},
-  {n:2,phase:'base',type:'B',vol:22,pct:28,
+  {n:2,phase:'base',type:'B',vol:22,pct:85,
    sess:[{d:1,cls:'run-short',icon:'⚡',desc:'Pasadas 6×600m Z4 + calentamiento',km:'12 km',isRun:true,gymDay:null},
          {d:3,cls:'gym',icon:'🏋️',desc:'Gym — Full body',km:'',isRun:false,gymDay:'full'},
          {d:6,cls:'run-short',icon:'🔄',desc:'Fondo corto Z2',km:'10 km',isRun:true,gymDay:null}]},
-  {n:3,phase:'base',type:'A',vol:24,pct:30,
+  {n:3,phase:'base',type:'A',vol:16,pct:62,
    sess:[{d:1,cls:'run-long',icon:'🏃',desc:'Fondo largo Z2',km:'16 km',isRun:true,gymDay:null},
          {d:3,cls:'gym',icon:'🏋️',desc:'Gym — Tren inferior',km:'',isRun:false,gymDay:'day1'},
          {d:5,cls:'gym',icon:'🏋️',desc:'Gym — Tren superior',km:'',isRun:false,gymDay:'day2'}]},
-  {n:4,phase:'base',type:'B',vol:18,pct:22,note:'Semana de recuperación.',
+  {n:4,phase:'base',type:'B',vol:19,pct:73,note:'Semana de recuperación.',
    sess:[{d:1,cls:'run-short',icon:'⚡',desc:'Pasadas 5×500m Z4 + calentamiento',km:'10 km',isRun:true,gymDay:null},
          {d:3,cls:'gym',icon:'🏋️',desc:'Gym — Full body liviano',km:'',isRun:false,gymDay:'full'},
          {d:6,cls:'run-short',icon:'🔄',desc:'Fondo corto regenerativo Z1–2',km:'9 km',isRun:true,gymDay:null}]},
-  {n:5,phase:'build1',type:'A',vol:26,pct:38,
+  {n:5,phase:'build1',type:'A',vol:17,pct:65,
    sess:[{d:1,cls:'run-long',icon:'🏃',desc:'Fondo largo Z2',km:'17 km',isRun:true,gymDay:null},
          {d:3,cls:'gym',icon:'🏋️',desc:'Gym — Tren inferior',km:'',isRun:false,gymDay:'day1'},
          {d:5,cls:'gym',icon:'🏋️',desc:'Gym — Tren superior',km:'',isRun:false,gymDay:'day2'}]},
-  {n:6,phase:'build1',type:'B',vol:27,pct:42,
+  {n:6,phase:'build1',type:'B',vol:26,pct:100,
    sess:[{d:1,cls:'run-short',icon:'⚡',desc:'Pasadas 6×800m Z4 + calentamiento',km:'14 km',isRun:true,gymDay:null},
          {d:3,cls:'gym',icon:'🏋️',desc:'Gym — Full body',km:'',isRun:false,gymDay:'full'},
          {d:6,cls:'run-short',icon:'🔄',desc:'Fondo corto Z2',km:'12 km',isRun:true,gymDay:null}]},
-  {n:7,phase:'build1',type:'A',vol:29,pct:48,
+  {n:7,phase:'build1',type:'A',vol:18,pct:69,
    sess:[{d:1,cls:'run-long',icon:'🏃',desc:'Fondo largo Z2',km:'18 km',isRun:true,gymDay:null},
          {d:3,cls:'gym',icon:'🏋️',desc:'Gym — Tren inferior',km:'',isRun:false,gymDay:'day1'},
          {d:5,cls:'gym',icon:'🏋️',desc:'Gym — Tren superior',km:'',isRun:false,gymDay:'day2'}]},
-  {n:8,phase:'build1',type:'B',vol:20,pct:32,note:'Semana de recuperación.',
+  {n:8,phase:'build1',type:'B',vol:21,pct:81,note:'Semana de recuperación.',
    sess:[{d:1,cls:'run-short',icon:'⚡',desc:'Pasadas 5×600m Z4 + calentamiento',km:'11 km',isRun:true,gymDay:null},
          {d:3,cls:'gym',icon:'🏋️',desc:'Gym — Full body liviano',km:'',isRun:false,gymDay:'full'},
          {d:6,cls:'run-short',icon:'🔄',desc:'Fondo corto regenerativo Z1–2',km:'10 km',isRun:true,gymDay:null}]},
-  {n:9,phase:'build2',type:'A',vol:30,pct:56,
+  {n:9,phase:'build2',type:'A',vol:19,pct:73,
    sess:[{d:1,cls:'run-long',icon:'🏃',desc:'Fondo largo Z2 — incorporar ritmo objetivo',km:'19 km',isRun:true,gymDay:null},
          {d:3,cls:'gym',icon:'🏋️',desc:'Gym — Tren inferior',km:'',isRun:false,gymDay:'day1'},
          {d:5,cls:'gym',icon:'🏋️',desc:'Gym — Tren superior',km:'',isRun:false,gymDay:'day2'}]},
-  {n:10,phase:'build2',type:'B',vol:28,pct:60,
+  {n:10,phase:'build2',type:'B',vol:26,pct:100,
    sess:[{d:1,cls:'run-short',icon:'⚡',desc:'Tempo 3×2km Z3–4 + calentamiento',km:'13 km',isRun:true,gymDay:null},
          {d:3,cls:'gym',icon:'🏋️',desc:'Gym — Full body',km:'',isRun:false,gymDay:'full'},
          {d:6,cls:'run-short',icon:'🔄',desc:'Fondo corto Z2',km:'13 km',isRun:true,gymDay:null}]},
-  {n:11,phase:'build2',type:'A',vol:33,pct:100,note:'Semana pico — máximo volumen.',
+  {n:11,phase:'build2',type:'A',vol:21,pct:81,note:'Semana pico — máximo volumen.',
    sess:[{d:1,cls:'run-long',icon:'🏃',desc:'Fondo largo MÁXIMO — ritmo carrera',km:'21 km',isRun:true,gymDay:null},
          {d:3,cls:'gym',icon:'🏋️',desc:'Gym — Tren inferior',km:'',isRun:false,gymDay:'day1'},
          {d:5,cls:'gym',icon:'🏋️',desc:'Gym — Tren superior',km:'',isRun:false,gymDay:'day2'}]},
-  {n:12,phase:'build2',type:'B',vol:21,pct:40,note:'Recuperación post-pico.',
+  {n:12,phase:'build2',type:'B',vol:22,pct:85,note:'Recuperación post-pico.',
    sess:[{d:1,cls:'run-short',icon:'⚡',desc:'Pasadas suaves 5×600m Z3 + calentamiento',km:'12 km',isRun:true,gymDay:null},
          {d:3,cls:'gym',icon:'🏋️',desc:'Gym — Full body liviano',km:'',isRun:false,gymDay:'full'},
          {d:6,cls:'run-short',icon:'🔄',desc:'Fondo corto regenerativo Z1–2',km:'10 km',isRun:true,gymDay:null}]},
-  {n:13,phase:'taper',type:'taper',vol:25,pct:55,
+  {n:13,phase:'taper',type:'taper',vol:17,pct:65,
    sess:[{d:1,cls:'run-long',icon:'🏃',desc:'Fondo moderado Z2',km:'17 km',isRun:true,gymDay:null},
          {d:3,cls:'gym',icon:'🏋️',desc:'Gym — Tren inferior liviano',km:'',isRun:false,gymDay:'day1'},
          {d:5,cls:'gym',icon:'🏋️',desc:'Gym — Tren superior liviano',km:'',isRun:false,gymDay:'day2'}]},
-  {n:14,phase:'taper',type:'taper',vol:18,pct:38,
+  {n:14,phase:'taper',type:'taper',vol:19,pct:73,
    sess:[{d:1,cls:'run-short',icon:'⚡',desc:'Pasadas cortas 4×400m Z4',km:'9 km',isRun:true,gymDay:null},
          {d:3,cls:'gym',icon:'🏋️',desc:'Gym — Full body liviano',km:'',isRun:false,gymDay:'full'},
          {d:6,cls:'run-short',icon:'🔄',desc:'Fondo corto Z2',km:'10 km',isRun:true,gymDay:null}]},
-  {n:15,phase:'taper',type:'taper',vol:12,pct:20,
+  {n:15,phase:'taper',type:'taper',vol:8,pct:31,
    sess:[{d:1,cls:'run-short',icon:'⚡',desc:'Rodaje corto activación Z2',km:'8 km',isRun:true,gymDay:null},
          {d:3,cls:'gym',icon:'🏋️',desc:'Movilidad + elongación',km:'',isRun:false,gymDay:null},
          {d:5,cls:'gym',icon:'🏋️',desc:'Descanso activo',km:'',isRun:false,gymDay:null}]},
-  {n:16,phase:'taper',type:'race',vol:21.1,pct:100,note:'Dom 6 Sep — ¡Carrera!',
+  {n:16,phase:'taper',type:'race',vol:25.1,pct:97,note:'Dom 6 Sep — ¡Carrera!',
    sess:[{d:1,cls:'run-short',icon:'⚡',desc:'Rodaje breve — soltar piernas',km:'4 km',isRun:true,gymDay:null},
          {d:6,cls:'race-day',icon:'🏁',desc:'MEDIO MARATÓN PUNTA DEL ESTE',km:'21.1 km',isRun:true,gymDay:null}]},
 ];
@@ -1030,7 +1030,7 @@ function buildCard(w,isCurrent,isPast){
       <div class="wk-info">
         <div class="wk-dates">${dateRange(i)}</div>
         <span class="wk-badge ${TYPE_CLS[w.type]||'type-A'}">${TYPE_LBL[w.type]||w.type}</span>
-        <div class="wk-vol"><span class="vol-n">${w.vol}</span><span class="vol-u"> km vol.</span></div>
+        <div class="wk-vol"><span class="vol-n">${w.vol}</span><span class="vol-u"> km running</span></div>
       </div>
     </div>
     <div class="cal-strip">${cal}</div>
