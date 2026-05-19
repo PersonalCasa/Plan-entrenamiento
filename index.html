@@ -1648,8 +1648,7 @@ function saveNutriData(nd){
 }
 
 function saveNutriDay(){
-  // Recalc from meals first, then read totals
-  recalcMealTotals();
+  // Read fields as-is — auto-save already keeps them in sync
   const kcal=parseFloat(document.getElementById('ni-kcal').value)||0;
   const prot=parseFloat(document.getElementById('ni-prot').value)||0;
   const carb=parseFloat(document.getElementById('ni-carb').value)||0;
@@ -1658,7 +1657,7 @@ function saveNutriDay(){
   if(!kcal){alert('Ingresá al menos las calorías o cargá las comidas primero');return;}
   const nd=getNutriData();
   const key=nutriDateKey(nutriCurrentDate);
-  if(!nd[key])nd[key]={meals:[]};
+  if(!nd[key])nd[key]={meals:nd[key]?.meals||[]};
   nd[key].kcal=kcal;nd[key].prot=prot;nd[key].carb=carb;nd[key].fat=fat;nd[key].fibra=fibra;
   saveNutriData(nd);
   renderNutri();
