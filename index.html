@@ -238,6 +238,29 @@ svg.chart{width:100%;overflow:visible;}
 
 @media(max-width:400px){.weeks-grid{grid-template-columns:1fr;}}
 
+/* GYM WEIGHT LOG */
+.weight-log{padding:10px 14px 14px;border-top:1px solid var(--border);background:rgba(167,139,250,.03);}
+.wl-title{font-family:DM Mono,monospace;font-size:10px;letter-spacing:2px;color:var(--gym);text-transform:uppercase;margin-bottom:10px;}
+.wl-entry-row{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:6px;margin-bottom:8px;align-items:end;}
+.wl-field{display:flex;flex-direction:column;gap:3px;}
+.wl-label{font-family:DM Mono,monospace;font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;}
+.wl-input{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:6px 8px;font-family:DM Mono,monospace;font-size:13px;color:var(--text);outline:none;width:100%;}
+.wl-input:focus{border-color:var(--gym);}
+.wl-save-btn{padding:6px 10px;background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);border-radius:4px;font-family:DM Mono,monospace;font-size:10px;color:var(--gym);cursor:pointer;text-transform:uppercase;white-space:nowrap;}
+.wl-save-btn:hover{background:rgba(167,139,250,.25);}
+.wl-history{margin-top:10px;}
+.wl-history-header{display:grid;grid-template-columns:80px 1fr 60px 60px 32px;gap:4px;margin-bottom:4px;}
+.wl-history-hdr{font-family:DM Mono,monospace;font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;}
+.wl-history-row{display:grid;grid-template-columns:80px 1fr 60px 60px 32px;gap:4px;padding:5px 0;border-bottom:1px solid rgba(42,42,58,.5);}
+.wl-history-row:last-child{border-bottom:none;}
+.wl-history-cell{font-family:DM Mono,monospace;font-size:11px;color:var(--text);}
+.wl-history-cell.best{color:var(--gym);font-weight:500;}
+.wl-del-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:0;}
+.wl-del-btn:hover{color:var(--fail);}
+.wl-chart{margin-top:12px;position:relative;width:100%;height:100px;}
+.wl-last{font-family:DM Mono,monospace;font-size:10px;color:var(--muted);margin-bottom:8px;}
+.wl-last strong{color:var(--gym);}
+
 /* DELETE BUTTONS */
 .del-day-btn{display:flex;align-items:center;gap:5px;padding:5px 10px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:5px;font-family:DM Mono,monospace;font-size:9px;letter-spacing:1px;color:var(--fail);cursor:pointer;text-transform:uppercase;margin-top:8px;width:100%;}
 .del-day-btn:hover{background:rgba(248,113,113,.18);}
@@ -686,7 +709,7 @@ const GYM_DAY1=[
    tip:'Fundamental para corredores — previene la fascitis plantar y la periostitis tibial. Bajá lento (3 tiempos) para máximo estímulo.'},
   {name:'Plancha con Toque de Hombro',target:'Core · Oblicuos · Anti-rotación',badge:'badge-core',
    exec:'En posición de plancha alta (brazos extendidos, manos bajo los hombros). Sin rotar las caderas, levantás una mano y tocás el hombro opuesto. Volvés y alternás. El cuerpo permanece completamente quieto — solo se mueve el brazo.',
-   sets:[{l:'Series',v:'3'},{l:'Reps',v:'10 por lado'},{l:'Descanso',v:'45"'}],
+   sets:[{l:'Series',v:'3'},{l:'Reps',v:'20 por lado'},{l:'Descanso',v:'45"'}],
    tip:'Si las caderas se mueven, separás más los pies. Es un ejercicio anti-rotación — cuanto más quieto el cuerpo, más efectivo.'},
   {name:'Plancha Lateral',target:'Oblicuos · Core lateral',badge:'badge-core',
    exec:'Apoyado en un antebrazo y el costado del pie, cuerpo recto de cabeza a talones, cadera levantada. Mantenés la posición sin dejar caer la cadera. Repetís del otro lado.',
@@ -782,8 +805,22 @@ const GYM_FULL=[
 
 // ===== RENDER GYM =====
 const GYM_LABELS={day1:'Día 1 — Inferior',day2:'Día 2 — Superior',full:'Full Body'};
+// Exercises that use weight per side (unilateral or dumbbells)
+const PER_SIDE_EXERCISES=['Estocadas','Curl Femoral','Extensión','Aductores','Abductores','Gemelos',
+  'Peso Muerto Rumano','Hip Thrust','Elevaciones','Curl Bíceps','Press de Hombro','Remo con Mancuerna'];
+const NO_WEIGHT_GYMS=['gym-warmup','gym-stretch'];
+
 function renderGym(data,cid){
-  document.getElementById(cid).innerHTML=data.map((ex,i)=>`
+  document.getElementById(cid).innerHTML=data.map((ex,i)=>{
+    const showWeightLog=!NO_WEIGHT_GYMS.includes(cid);
+    const isPerSide=PER_SIDE_EXERCISES.some(function(n){return ex.name.includes(n);});
+    const weightLabel=isPerSide?'kg por lado':'kg';
+    const exKey=cid+'_'+ex.name.replace(/[^a-zA-Z0-9]/g,'_');
+    const lastLog=showWeightLog?getLastWeightLog(exKey):null;
+    const lastStr=lastLog?(lastLog.kg>0?
+      `<span class="wl-last">Última: <strong>${lastLog.kg} ${isPerSide?'kg/lado':'kg'}${lastLog.reps?' × '+lastLog.reps+' rep':''}</strong> · ${lastLog.date}</span>`:
+      `<span class="wl-last">Última: <strong>${lastLog.reps}</strong> · ${lastLog.date}</span>`):'';
+    return `
     <div class="exercise" id="${cid}-ex${i}">
       <div class="ex-header" onclick="toggleEx('${cid}-ex${i}')">
         <div class="ex-num">${String(i+1).padStart(2,'0')}</div>
@@ -795,8 +832,41 @@ function renderGym(data,cid){
         <div class="ex-sets">${ex.sets.map(s=>`<div class="ex-set"><span class="set-label">${s.l}</span><span class="set-val">${s.v}</span></div>`).join('')}</div>
         <div class="ex-exec">📋 <strong>Ejecución:</strong> ${ex.exec}</div>
         <div class="ex-tip">💡 ${ex.tip}</div>
+        ${showWeightLog?`
+        <div class="weight-log">
+          <div class="wl-title">⚖️ Registro de pesos</div>
+          ${lastStr}
+          <div style="display:flex;gap:6px;align-items:flex-end;margin-bottom:8px;">
+            ${(ex.name.includes('Plancha')&&!ex.name.includes('Toque')&&!ex.name.includes('toque'))||ex.name.includes('Hollow')?`
+            <div class="wl-field" style="flex:1">
+              <span class="wl-label">Tiempo</span>
+              <input class="wl-input" id="wl-reps2-${exKey}" placeholder="45&quot;">
+            </div>`:`
+            <div class="wl-field" style="flex:1">
+              <span class="wl-label">${weightLabel}</span>
+              <input class="wl-input" id="wl-kg-${exKey}" type="number" step="0.5" placeholder="20">
+            </div>
+            <div class="wl-field" style="width:70px">
+              <span class="wl-label">Reps</span>
+              <input class="wl-input" id="wl-reps2-${exKey}" type="number" placeholder="12">
+            </div>`}
+            <button class="wl-save-btn" onclick="saveWeightLog('${exKey}')">+ Guardar</button>
+          </div>
+          <div class="wl-history" id="wl-hist-${exKey}"></div>
+          <div style="position:relative;width:100%;height:100px;display:none;" id="wl-chart-wrap-${exKey}">
+            <canvas id="wl-chart-${exKey}" role="img" aria-label="Evolución de carga en ${ex.name}"></canvas>
+          </div>
+        </div>`:''}
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
+  // Render existing logs (skip warmup/stretch)
+  if(!NO_WEIGHT_GYMS.includes(cid)){
+    data.forEach((ex,i)=>{
+      const exKey=cid+'_'+ex.name.replace(/[^a-zA-Z0-9]/g,'_');
+      renderWeightLogHistory(exKey);
+    });
+  }
 }
 function toggleEx(id){document.getElementById(id).classList.toggle('open');}
 
@@ -2697,7 +2767,131 @@ function saveSessionDate(key,dateStr){
   renderStats();
 }
 
+// ===== GYM WEIGHT LOG =====
+function getWeightLogs(){
+  const s=getState();
+  return s._gymWeights||{};
+}
+function saveWeightLogs(logs){
+  const s=getState();
+  s._gymWeights=logs;
+  saveState(s);
+}
+function getLastWeightLog(exKey){
+  const logs=getWeightLogs();
+  const entries=(logs[exKey]||[]).filter(function(e){return e.kg&&!isNaN(e.kg);});
+  return entries.length?entries[entries.length-1]:null;
+}
+
+function saveWeightLog(exKey){
+  const kgEl=document.getElementById('wl-kg-'+exKey);
+  const repsEl=document.getElementById('wl-reps2-'+exKey);
+  const kg=parseFloat(kgEl?.value)||0;
+  const reps=repsEl?.value||'';
+  if(!kg&&!reps)return;
+  const logs=getWeightLogs();
+  if(!logs[exKey])logs[exKey]=[];
+  const today=new Date();
+  const dateStr=today.getDate()+'/'+(today.getMonth()+1)+'/'+today.getFullYear();
+  logs[exKey].push({kg:kg||0,reps,date:dateStr,ts:Date.now()});
+  saveWeightLogs(logs);
+  if(kgEl)kgEl.value='';
+  if(repsEl)repsEl.value='';
+  renderWeightLogHistory(exKey);
+}
+
+function deleteWeightLog(exKey,idx){
+  const logs=getWeightLogs();
+  if(!logs[exKey])return;
+  logs[exKey].splice(idx,1);
+  saveWeightLogs(logs);
+  renderWeightLogHistory(exKey);
+}
+
+function renderWeightLogHistory(exKey){
+  const histEl=document.getElementById('wl-hist-'+exKey);
+  if(!histEl)return;
+  const logs=getWeightLogs();
+  const entries=logs[exKey]||[];
+  if(!entries.length){histEl.innerHTML='';return;}
+
+  // Find best (max kg)
+  const maxKg=Math.max.apply(null,entries.map(function(e){return e.kg;}));
+
+  histEl.innerHTML=
+    '<div class="wl-history-header">'+
+    '<div class="wl-history-hdr">Fecha</div>'+
+    '<div class="wl-history-hdr">Volumen</div>'+
+    '<div class="wl-history-hdr">Kg</div>'+
+    '<div class="wl-history-hdr">Reps×Series</div>'+
+    '<div class="wl-history-hdr"></div>'+
+    '</div>'+
+    entries.slice().reverse().map(function(e,ri){
+      const idx=entries.length-1-ri;
+      const vol=Math.round(e.kg*(e.reps||0)*(e.sets||0));
+      const isBest=e.kg===maxKg;
+      return '<div class="wl-history-row">'+
+        '<div class="wl-history-cell">'+e.date+'</div>'+
+        '<div class="wl-history-cell '+(isBest?'best':'')+'">'+vol+'kg</div>'+
+        '<div class="wl-history-cell '+(isBest?'best':'')+'">'+e.kg+'kg'+(isBest?' 🏆':'')+'</div>'+
+        '<div class="wl-history-cell">'+e.reps+'×'+e.sets+'</div>'+
+        '<button class="wl-del-btn" onclick="deleteWeightLog(\"'+exKey+'\"\,'+idx+')">✕</button>'+
+        '</div>';
+    }).join('');
+
+  // Show chart if >= 2 entries
+  const chartWrap=document.getElementById('wl-chart-wrap-'+exKey);
+  const chartEl=document.getElementById('wl-chart-'+exKey);
+  if(chartWrap&&chartEl&&entries.length>=2&&typeof Chart!=='undefined'){
+    chartWrap.style.display='block';
+    // Destroy existing chart if any
+    const existing=Chart.getChart(chartEl);
+    if(existing)existing.destroy();
+    const isDark=matchMedia('(prefers-color-scheme: dark)').matches;
+    const gridColor=isDark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)';
+    const textColor=isDark?'#aaa':'#888';
+    new Chart(chartEl,{
+      type:'line',
+      data:{
+        labels:entries.map(function(e){return e.date;}),
+        datasets:[{
+          label:'Kg',
+          data:entries.map(function(e){return e.kg;}),
+          borderColor:'#a78bfa',
+          backgroundColor:'rgba(167,139,250,0.08)',
+          pointBackgroundColor:'#a78bfa',
+          pointRadius:4,
+          tension:0.3,
+          fill:true,
+        }]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          x:{grid:{color:gridColor},ticks:{color:textColor,font:{size:9}}},
+          y:{grid:{color:gridColor},ticks:{color:textColor,font:{size:9},callback:function(v){return v+'kg';}}}
+        }
+      }
+    });
+  }
+}
+
+function cleanAllWeightLogs(){
+  const s=getState();
+  const logs=s._gymWeights||{};
+  let changed=false;
+  Object.keys(logs).forEach(function(key){
+    const clean=logs[key].filter(function(e){
+      return e&&typeof e.kg==='number'&&!isNaN(e.kg)&&e.date;
+    });
+    if(clean.length!==logs[key].length){logs[key]=clean;changed=true;}
+  });
+  if(changed){s._gymWeights=logs;saveState(s);}
+}
+
 // ===== INIT =====
+cleanAllWeightLogs();
 renderGym(GYM_DAY1,'gym-day1');
 renderGym(GYM_DAY2,'gym-day2');
 renderGym(GYM_FULL,'gym-full');
