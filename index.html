@@ -1941,10 +1941,9 @@ function saveMeals(){
 }
 
 function getTarget(dateStr){
-  // Fixed targets based on Nico's nutrition plan
-  // Rest day vs training day targets
-  var REST  = {kcal:2100, prot:150, fat:65,  carb:205, fibra:32};
-  var TRAIN = {kcal:2600, prot:160, fat:68,  carb:330, fibra:30};
+  // Fixed targets based on Nico's nutrition plan — goal weight 66kg, 165cm
+  var REST  = {kcal:1950, prot:145, fat:60,  carb:195, fibra:32};
+  var TRAIN = {kcal:2450, prot:155, fat:65,  carb:315, fibra:30};
 
   // Check if dateStr is a training day
   var isTrainDay = false;
@@ -2049,16 +2048,38 @@ function renderNutriDaySummary(dayData, target, dateStr){
 
 function renderNutriAvgs(nd){
   const el=document.getElementById('nutri-avgs');
-  const vals=Object.values(nd).filter(v=>v&&v.kcal);
-  if(!vals.length)return;
+  if(!el)return;
+  const todayStr=nutriDateKey(new Date());
+  // Exclude today — only completed days
+  const vals=Object.entries(nd).filter(function(e){
+    return e[1]&&e[1].kcal&&e[0]!==todayStr;
+  }).map(function(e){return e[1];});
+
+  if(!vals.length){
+    const tgt0=getTarget(null);
+    el.innerHTML='<div style="font-family:DM Mono,monospace;font-size:10px;color:var(--muted);margin-bottom:10px;letter-spacing:1px;">Sin días completados aún — hoy no cuenta</div>'+
+      ['Calorías','Proteína','Carbohidratos','Grasa','Fibra'].map(function(l,i){
+        const units=['kcal','g','g','g','g'];
+        const tgts=[tgt0.kcal,tgt0.prot,tgt0.carb,tgt0.fat,tgt0.fibra];
+        const colors=['var(--accent)','#4ade80','#fbbf24','#fb923c','var(--accent2)'];
+        return '<div class="avg-card" style="opacity:.5;">'+
+          '<div style="font-family:DM Mono,monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">'+l+'</div>'+
+          '<div style="font-family:Bebas Neue,sans-serif;font-size:22px;color:'+colors[i]+';line-height:1;">—</div>'+
+          '<div style="font-family:DM Mono,monospace;font-size:9px;color:var(--muted);margin-top:4px;">target: '+tgts[i]+units[i]+'</div>'+
+          '</div>';
+      }).join('');
+    return;
+  }
+
   const avgKcal=Math.round(vals.reduce((a,v)=>a+(v.kcal||0),0)/vals.length);
   const avgProt=Math.round(vals.reduce((a,v)=>a+(v.prot||0),0)/vals.length);
+  const avgCarb=Math.round(vals.reduce((a,v)=>a+(v.carb||0),0)/vals.length);
   const avgFat=Math.round(vals.reduce((a,v)=>a+(v.fat||0),0)/vals.length);
   const avgFibra=Math.round(vals.reduce((a,v)=>a+(v.fibra||0),0)/vals.length);
-  const target=getTarget();
+  const target=getTarget(null);
   const kcalColor=Math.abs(avgKcal-target.kcal)<150?'var(--ok)':avgKcal>target.kcal?'var(--fail)':'var(--accent)';
-  const tgt=getTarget(null);
-  const daysLabel=vals.length+' día'+(vals.length!==1?'s':'');
+  const tgt=target;
+  const daysLabel=vals.length+' día'+(vals.length!==1?'s':', hoy excluido');
 
   function avgCard(val,tgtVal,unit,label,color){
     const pct=tgtVal>0?Math.round(val/tgtVal*100):0;
