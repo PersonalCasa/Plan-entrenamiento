@@ -2934,9 +2934,16 @@ function saveWeightLog(exKey){
   renderWeightLogHistory(exKey);
 }
 
+function handleDelWeight(btn){
+  const exKey=btn.getAttribute('data-exkey');
+  const idx=parseInt(btn.getAttribute('data-idx'));
+  deleteWeightLog(exKey,idx);
+}
+
 function deleteWeightLog(exKey,idx){
   const logs=getWeightLogs();
   if(!logs[exKey])return;
+  if(idx<0||idx>=logs[exKey].length)return;
   logs[exKey].splice(idx,1);
   saveWeightLogs(logs);
   renderWeightLogHistory(exKey);
