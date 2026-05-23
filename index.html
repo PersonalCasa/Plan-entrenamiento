@@ -466,9 +466,16 @@ svg.chart{width:100%;overflow:visible;}
 <div class="page" id="page-stats">
 <div class="stats-page">
 
-  <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
-    <button onclick="exportToCSV()" style="flex:1;padding:9px 12px;background:rgba(71,196,255,.08);border:1px solid rgba(71,196,255,.25);border-radius:6px;font-family:DM Mono,monospace;font-size:10px;letter-spacing:2px;color:var(--accent2);cursor:pointer;text-transform:uppercase;">📊 Exportar CSV</button>
-    <button onclick="exportToPDF()" style="flex:1;padding:9px 12px;background:rgba(232,255,71,.08);border:1px solid rgba(232,255,71,.25);border-radius:6px;font-family:DM Mono,monospace;font-size:10px;letter-spacing:2px;color:var(--accent);cursor:pointer;text-transform:uppercase;">📄 Exportar PDF</button>
+  <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+    <button onclick="exportToCSV()" style="flex:1;padding:9px 12px;background:rgba(71,196,255,.08);border:1px solid rgba(71,196,255,.25);border-radius:6px;font-family:DM Mono,monospace;font-size:10px;letter-spacing:2px;color:var(--accent2);cursor:pointer;text-transform:uppercase;">📊 CSV</button>
+    <button onclick="exportToPDF()" style="flex:1;padding:9px 12px;background:rgba(232,255,71,.08);border:1px solid rgba(232,255,71,.25);border-radius:6px;font-family:DM Mono,monospace;font-size:10px;letter-spacing:2px;color:var(--accent);cursor:pointer;text-transform:uppercase;">📄 PDF</button>
+    <button onclick="exportBackup()" style="flex:1;padding:9px 12px;background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.25);border-radius:6px;font-family:DM Mono,monospace;font-size:10px;letter-spacing:2px;color:var(--ok);cursor:pointer;text-transform:uppercase;">💾 Backup</button>
+    <label style="flex:1;padding:9px 12px;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.25);border-radius:6px;font-family:DM Mono,monospace;font-size:10px;letter-spacing:2px;color:var(--gym);cursor:pointer;text-transform:uppercase;text-align:center;">
+      📥 Restaurar<input type="file" accept=".json" onchange="importBackup(this)" style="display:none">
+    </label>
+  </div>
+  <div style="font-family:DM Mono,monospace;font-size:10px;color:var(--muted);margin-bottom:20px;padding:8px 12px;background:var(--surface);border-radius:5px;">
+    💡 Guardá un backup antes de actualizar la app — si algo sale mal lo restaurás en segundos
   </div>
 
   <div class="stats-section">
@@ -871,8 +878,81 @@ function renderGym(data,cid){
 function toggleEx(id){document.getElementById(id).classList.toggle('open');}
 
 // ===== STORAGE =====
-function getState(){return JSON.parse(localStorage.getItem('pde_plan')||'{}');}
-function saveState(s){localStorage.setItem('pde_plan',JSON.stringify(s));}
+// ===== STORAGE — IndexedDB with localStorage fallback =====
+const DB_NAME='runplan_db';
+const DB_VERSION=1;
+const STORE='state';
+let _db=null;
+let _cache={};  // in-memory cache for sync access
+
+// Initialize DB
+function initDB(){
+  return new Promise(function(resolve,reject){
+    if(_db){resolve(_db);return;}
+    const req=indexedDB.open(DB_NAME,DB_VERSION);
+    req.onupgradeneeded=function(e){
+      const db=e.target.result;
+      if(!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
+    };
+    req.onsuccess=function(e){
+      _db=e.target.result;
+      resolve(_db);
+    };
+    req.onerror=function(){reject(req.error);};
+  });
+}
+
+// Load all data into cache on startup
+function loadStateFromDB(){
+  return initDB().then(function(db){
+    return new Promise(function(resolve){
+      const tx=db.transaction(STORE,'readonly');
+      const req=tx.objectStore(STORE).get('main');
+      req.onsuccess=function(){
+        if(req.result){
+          _cache=req.result;
+        } else {
+          // Migrate from localStorage if exists
+          try{
+            const ls=localStorage.getItem('pde_plan');
+            if(ls){_cache=JSON.parse(ls);saveStateToDB(_cache);}
+          }catch(e){}
+        }
+        resolve(_cache);
+      };
+      req.onerror=function(){
+        // Fallback to localStorage
+        try{const ls=localStorage.getItem('pde_plan');if(ls)_cache=JSON.parse(ls);}catch(e){}
+        resolve(_cache);
+      };
+    });
+  }).catch(function(){
+    try{const ls=localStorage.getItem('pde_plan');if(ls)_cache=JSON.parse(ls);}catch(e){}
+    return _cache;
+  });
+}
+
+function saveStateToDB(s){
+  initDB().then(function(db){
+    const tx=db.transaction(STORE,'readwrite');
+    tx.objectStore(STORE).put(s,'main');
+    // Also keep localStorage as backup
+    try{localStorage.setItem('pde_plan',JSON.stringify(s));}catch(e){}
+  }).catch(function(){
+    // Fallback to localStorage only
+    try{localStorage.setItem('pde_plan',JSON.stringify(s));}catch(e){}
+  });
+}
+
+// Synchronous getState — returns from cache
+function getState(){return _cache||{};}
+
+// Synchronous saveState — saves to cache and async to DB
+function saveState(s){
+  _cache=s;
+  saveStateToDB(s);
+}
+
 function sessKey(wn,di){return `w${wn}_d${di}`;}
 
 function getSessionKm(key){
@@ -2261,6 +2341,39 @@ function updateBellUI(active){
 }
 
 // ===== EXPORT =====
+function exportBackup(){
+  const data=getState();
+  const json=JSON.stringify(data,null,2);
+  const blob=new Blob([json],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const date=new Date();
+  a.href=url;
+  a.download='runplan_backup_'+date.getDate()+'_'+(date.getMonth()+1)+'_'+date.getFullYear()+'.json';
+  document.body.appendChild(a);a.click();
+  document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+
+function importBackup(input){
+  const file=input.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const data=JSON.parse(e.target.result);
+      if(typeof data!=='object'){alert('Archivo inválido');return;}
+      if(!confirm('¿Restaurar backup? Esto reemplaza todos los datos actuales.'))return;
+      saveState(data);
+      alert('✓ Backup restaurado. La app se va a recargar.');
+      setTimeout(function(){location.reload();},500);
+    }catch(err){
+      alert('Error al leer el archivo: '+err.message);
+    }
+  };
+  reader.readAsText(file);
+  input.value='';
+}
+
 function exportToCSV(){
   const s=getState();
   const rows=[['Tipo','Semana','Día','Descripción','Km planificados','Km reales','Tiempo','Ritmo','RPE','Estado']];
@@ -2912,15 +3025,18 @@ function cleanAllWeightLogs(){
 }
 
 // ===== INIT =====
-cleanAllWeightLogs();
-renderGym(GYM_DAY1,'gym-day1');
-renderGym(GYM_DAY2,'gym-day2');
-renderGym(GYM_FULL,'gym-full');
-renderGym(GYM_WARMUP,'gym-warmup');
-renderGym(GYM_STRETCH,'gym-stretch');
-render();
-initNotifBtn();
-preloadFoodHistory();
+// Load state from IndexedDB then render everything
+loadStateFromDB().then(function(){
+  cleanAllWeightLogs();
+  renderGym(GYM_DAY1,'gym-day1');
+  renderGym(GYM_DAY2,'gym-day2');
+  renderGym(GYM_FULL,'gym-full');
+  renderGym(GYM_WARMUP,'gym-warmup');
+  renderGym(GYM_STRETCH,'gym-stretch');
+  render();
+  initNotifBtn();
+  preloadFoodHistory();
+});
 
 // Load Chart.js for stats page
 if(!window.Chart){

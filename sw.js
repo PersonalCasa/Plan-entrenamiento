@@ -1,4 +1,4 @@
-const CACHE = 'pde-plan-v4';
+const CACHE = 'pde-plan-v5';
 const STATIC = [
   '/Plan-entrenamiento/manifest.json',
   '/Plan-entrenamiento/icon-192.png',
