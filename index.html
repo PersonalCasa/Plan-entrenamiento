@@ -2953,39 +2953,50 @@ function renderWeightLogHistory(exKey){
   const histEl=document.getElementById('wl-hist-'+exKey);
   if(!histEl)return;
   const logs=getWeightLogs();
-  const entries=logs[exKey]||[];
+
+  // Clean corrupt entries
+  let entries=(logs[exKey]||[]).filter(function(e){
+    return e&&typeof e.kg==='number'&&!isNaN(e.kg)&&e.kg>=0&&e.date;
+  });
+  if(entries.length!==(logs[exKey]||[]).length){
+    logs[exKey]=entries;
+    saveWeightLogs(logs);
+  }
   if(!entries.length){histEl.innerHTML='';return;}
 
-  // Find best (max kg)
   const maxKg=Math.max.apply(null,entries.map(function(e){return e.kg;}));
+  const firstKg=entries[0].kg||0;
+  const isTimeBased=entries.some(function(e){return e.reps&&isNaN(parseFloat(e.reps));});
 
   histEl.innerHTML=
-    '<div class="wl-history-header">'+
+    '<div style="display:grid;grid-template-columns:80px 1fr 60px 32px;gap:4px;margin-bottom:4px;">'+
     '<div class="wl-history-hdr">Fecha</div>'+
-    '<div class="wl-history-hdr">Volumen</div>'+
-    '<div class="wl-history-hdr">Kg</div>'+
-    '<div class="wl-history-hdr">Reps×Series</div>'+
-    '<div class="wl-history-hdr"></div>'+
+    '<div class="wl-history-hdr">'+(isTimeBased?'Tiempo':'Kg · Reps')+'</div>'+
+    '<div class="wl-history-hdr">Evol.</div>'+
+    '<div></div>'+
     '</div>'+
     entries.slice().reverse().map(function(e,ri){
-      const idx=entries.length-1-ri;
-      const vol=Math.round(e.kg*(e.reps||0)*(e.sets||0));
-      const isBest=e.kg===maxKg;
-      return '<div class="wl-history-row">'+
-        '<div class="wl-history-cell">'+e.date+'</div>'+
-        '<div class="wl-history-cell '+(isBest?'best':'')+'">'+vol+'kg</div>'+
-        '<div class="wl-history-cell '+(isBest?'best':'')+'">'+e.kg+'kg'+(isBest?' 🏆':'')+'</div>'+
-        '<div class="wl-history-cell">'+e.reps+'×'+e.sets+'</div>'+
-        '<button class="wl-del-btn" onclick="deleteWeightLog(\"'+exKey+'\"\,'+idx+')">✕</button>'+
+      const realIdx=entries.length-1-ri;
+      const isBest=e.kg>0&&e.kg===maxKg;
+      const mainVal=isTimeBased
+        ?(e.reps||'—')
+        :(e.kg>0?e.kg+' kg'+(e.reps&&e.reps!=='undefined'?' × '+e.reps+' rep':''):'—');
+      const diffPct=firstKg>0&&e.kg>0?Math.round((e.kg-firstKg)/firstKg*100):0;
+      const pctStr=isTimeBased||firstKg===0?'—':(diffPct===0?'—':(diffPct>0?'+':'')+diffPct+'%');
+      const pctColor=diffPct>0?'var(--ok)':diffPct<0?'var(--fail)':'var(--muted)';
+      return '<div style="display:grid;grid-template-columns:80px 1fr 60px 32px;gap:4px;padding:5px 0;border-bottom:1px solid rgba(42,42,58,.5);">'+
+        '<div class="wl-history-cell" style="font-size:10px;">'+e.date+'</div>'+
+        '<div class="wl-history-cell '+(isBest?'best':'')+'">'+mainVal+(isBest?' 🏆':'')+'</div>'+
+        '<div class="wl-history-cell" style="font-size:10px;color:'+pctColor+';">'+pctStr+'</div>'+
+        '<button class="wl-del-btn" data-exkey="'+exKey.replace(/"/g,'&quot;')+'" data-idx="'+realIdx+'" onclick="handleDelWeight(this)">✕</button>'+
         '</div>';
     }).join('');
 
-  // Show chart if >= 2 entries
+  // Chart
   const chartWrap=document.getElementById('wl-chart-wrap-'+exKey);
   const chartEl=document.getElementById('wl-chart-'+exKey);
   if(chartWrap&&chartEl&&entries.length>=2&&typeof Chart!=='undefined'){
     chartWrap.style.display='block';
-    // Destroy existing chart if any
     const existing=Chart.getChart(chartEl);
     if(existing)existing.destroy();
     const isDark=matchMedia('(prefers-color-scheme: dark)').matches;
