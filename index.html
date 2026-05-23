@@ -812,21 +812,36 @@ const GYM_FULL=[
 
 // ===== RENDER GYM =====
 const GYM_LABELS={day1:'Día 1 — Inferior',day2:'Día 2 — Superior',full:'Full Body'};
-// Exercises that use weight per side (unilateral or dumbbells)
-const PER_SIDE_EXERCISES=['Estocadas','Curl Femoral','Extensión','Aductores','Abductores','Gemelos',
-  'Peso Muerto Rumano','Hip Thrust','Elevaciones','Curl Bíceps','Press de Hombro','Remo con Mancuerna'];
+// Exercise classification
+const PER_SIDE_EXERCISES=[
+  'Estocadas con Mancuernas','Peso Muerto Rumano — Mancuernas',
+  'Elevaciones Laterales Mancuerna','Press Inclinado Mancuernas'
+];
+const TIME_ONLY_EXERCISES=[
+  'Plancha Lateral','Plancha Frontal','Bici estática','Círculos de cadera',
+  'Isquiotibiales sentado','Glúteo — figura 4','Flexor de cadera',
+  'Gemelos — talón contra pared','Zona lumbar — rodillas al pecho'
+];
+const REPS_ONLY_EXERCISES=[
+  'Plancha con Toque de Hombro','Crunch Declinado',
+  'Sentadillas sin peso','Estocadas sin peso','Puente de glúteos'
+];
 const NO_WEIGHT_GYMS=['gym-warmup','gym-stretch'];
 
 function renderGym(data,cid){
   document.getElementById(cid).innerHTML=data.map((ex,i)=>{
     const showWeightLog=!NO_WEIGHT_GYMS.includes(cid);
-    const isPerSide=PER_SIDE_EXERCISES.some(function(n){return ex.name.includes(n);});
+    const isPerSide=PER_SIDE_EXERCISES.includes(ex.name);
+    const isTimeOnly=TIME_ONLY_EXERCISES.some(function(n){return ex.name.includes(n);});
+    const isRepsOnly=REPS_ONLY_EXERCISES.some(function(n){return ex.name.includes(n);});
     const weightLabel=isPerSide?'kg por lado':'kg';
     const exKey=cid+'_'+ex.name.replace(/[^a-zA-Z0-9]/g,'_');
     const lastLog=showWeightLog?getLastWeightLog(exKey):null;
-    const lastStr=lastLog?(lastLog.kg>0?
-      `<span class="wl-last">Última: <strong>${lastLog.kg} ${isPerSide?'kg/lado':'kg'}${lastLog.reps?' × '+lastLog.reps+' rep':''}</strong> · ${lastLog.date}</span>`:
-      `<span class="wl-last">Última: <strong>${lastLog.reps}</strong> · ${lastLog.date}</span>`):'';
+    const lastStr=lastLog?(
+      isTimeOnly?`<span class="wl-last">Última: <strong>${lastLog.reps||'—'}</strong> · ${lastLog.date}</span>`:
+      isRepsOnly?`<span class="wl-last">Última: <strong>${lastLog.reps||'—'} reps</strong> · ${lastLog.date}</span>`:
+      lastLog.kg>0?`<span class="wl-last">Última: <strong>${lastLog.kg} ${isPerSide?'kg/lado':'kg'}${lastLog.reps?' × '+lastLog.reps+' rep':''}</strong> · ${lastLog.date}</span>`:
+      `<span class="wl-last">Última: <strong>${lastLog.reps||'—'}</strong> · ${lastLog.date}</span>`):'';
     return `
     <div class="exercise" id="${cid}-ex${i}">
       <div class="ex-header" onclick="toggleEx('${cid}-ex${i}')">
@@ -844,19 +859,26 @@ function renderGym(data,cid){
           <div class="wl-title">⚖️ Registro de pesos</div>
           ${lastStr}
           <div style="display:flex;gap:6px;align-items:flex-end;margin-bottom:8px;">
-            ${(ex.name.includes('Plancha')&&!ex.name.includes('Toque')&&!ex.name.includes('toque'))||ex.name.includes('Hollow')?`
-            <div class="wl-field" style="flex:1">
-              <span class="wl-label">Tiempo</span>
-              <input class="wl-input" id="wl-reps2-${exKey}" placeholder="45&quot;">
-            </div>`:`
-            <div class="wl-field" style="flex:1">
-              <span class="wl-label">${weightLabel}</span>
-              <input class="wl-input" id="wl-kg-${exKey}" type="number" step="0.5" placeholder="20">
-            </div>
-            <div class="wl-field" style="width:70px">
-              <span class="wl-label">Reps</span>
-              <input class="wl-input" id="wl-reps2-${exKey}" type="number" placeholder="12">
-            </div>`}
+            ${isTimeOnly?`
+              <div class="wl-field" style="flex:1">
+                <span class="wl-label">Tiempo</span>
+                <input class="wl-input" id="wl-reps2-${exKey}" placeholder='45"'>
+              </div>
+            `:isRepsOnly?`
+              <div class="wl-field" style="flex:1">
+                <span class="wl-label">Repeticiones</span>
+                <input class="wl-input" id="wl-reps2-${exKey}" type="number" placeholder="20">
+              </div>
+            `:`
+              <div class="wl-field" style="flex:1">
+                <span class="wl-label">${weightLabel}</span>
+                <input class="wl-input" id="wl-kg-${exKey}" type="number" step="0.5" placeholder="20">
+              </div>
+              <div class="wl-field" style="width:70px">
+                <span class="wl-label">Reps</span>
+                <input class="wl-input" id="wl-reps2-${exKey}" type="number" placeholder="12">
+              </div>
+            `}
             <button class="wl-save-btn" onclick="saveWeightLog('${exKey}')">+ Guardar</button>
           </div>
           <div class="wl-history" id="wl-hist-${exKey}"></div>
@@ -2922,12 +2944,18 @@ function saveWeightLog(exKey){
   const repsEl=document.getElementById('wl-reps2-'+exKey);
   const kg=parseFloat(kgEl?.value)||0;
   const reps=repsEl?.value||'';
+  // Need at least kg or reps/time
   if(!kg&&!reps)return;
   const logs=getWeightLogs();
   if(!logs[exKey])logs[exKey]=[];
   const today=new Date();
   const dateStr=today.getDate()+'/'+(today.getMonth()+1)+'/'+today.getFullYear();
-  logs[exKey].push({kg:kg||0,reps,date:dateStr,ts:Date.now()});
+  // Only save relevant fields
+  const entry={date:dateStr,ts:Date.now()};
+  if(kg>0)entry.kg=kg;
+  if(reps)entry.reps=reps;
+  if(!entry.kg)entry.kg=0; // needed for maxKg calc
+  logs[exKey].push(entry);
   saveWeightLogs(logs);
   if(kgEl)kgEl.value='';
   if(repsEl)repsEl.value='';
@@ -2966,12 +2994,17 @@ function renderWeightLogHistory(exKey){
 
   const maxKg=Math.max.apply(null,entries.map(function(e){return e.kg;}));
   const firstKg=entries[0].kg||0;
-  const isTimeBased=entries.some(function(e){return e.reps&&isNaN(parseFloat(e.reps));});
+  // Detect type from first entry
+  const firstEntry=entries[0]||{};
+  // Detect type: if kg===0 and reps is non-numeric → time; if kg===0 → reps only; else kg+reps
+  const isTimeBased=entries.some(function(e){return (!e.kg||e.kg===0)&&e.reps&&isNaN(parseFloat(e.reps));});
+  const isRepsOnly=!isTimeBased&&entries.every(function(e){return !e.kg||e.kg===0;});
+  const isRepsOnlyHist=entries.every(function(e){return (!e.kg||e.kg===0)&&e.reps;});
 
   histEl.innerHTML=
     '<div style="display:grid;grid-template-columns:80px 1fr 60px 32px;gap:4px;margin-bottom:4px;">'+
     '<div class="wl-history-hdr">Fecha</div>'+
-    '<div class="wl-history-hdr">'+(isTimeBased?'Tiempo':'Kg · Reps')+'</div>'+
+    '<div class="wl-history-hdr">'+(isTimeBased?'Tiempo':isRepsOnlyHist?'Reps':'Kg · Reps')+'</div>'+
     '<div class="wl-history-hdr">Evol.</div>'+
     '<div></div>'+
     '</div>'+
@@ -2980,9 +3013,13 @@ function renderWeightLogHistory(exKey){
       const isBest=e.kg>0&&e.kg===maxKg;
       const mainVal=isTimeBased
         ?(e.reps||'—')
-        :(e.kg>0?e.kg+' kg'+(e.reps&&e.reps!=='undefined'?' × '+e.reps+' rep':''):'—');
-      const diffPct=firstKg>0&&e.kg>0?Math.round((e.kg-firstKg)/firstKg*100):0;
-      const pctStr=isTimeBased||firstKg===0?'—':(diffPct===0?'—':(diffPct>0?'+':'')+diffPct+'%');
+        :isRepsOnlyHist
+        ?(e.reps?e.reps+' reps':'—')
+        :(e.kg>0?e.kg+' kg'+(e.reps&&e.reps!=='undefined'&&e.reps!=='null'?' × '+e.reps+' rep':''):'—');
+      const firstVal=isRepsOnly?(parseFloat(entries[0].reps)||0):firstKg;
+      const curVal=isRepsOnly?(parseFloat(e.reps)||0):(e.kg||0);
+      const diffPct=firstVal>0&&curVal>0?Math.round((curVal-firstVal)/firstVal*100):0;
+      const pctStr=(isTimeBased)||firstVal===0?'—':(diffPct===0?'—':(diffPct>0?'+':'')+diffPct+'%');
       const pctColor=diffPct>0?'var(--ok)':diffPct<0?'var(--fail)':'var(--muted)';
       return '<div style="display:grid;grid-template-columns:80px 1fr 60px 32px;gap:4px;padding:5px 0;border-bottom:1px solid rgba(42,42,58,.5);">'+
         '<div class="wl-history-cell" style="font-size:10px;">'+e.date+'</div>'+
