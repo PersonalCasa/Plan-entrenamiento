@@ -745,10 +745,6 @@ const GYM_DAY2=[
    exec:'De pie entre las poleas altas. Brazos abiertos con codo levemente flexionado. Cerrás hacia adelante juntando las manos frente al pecho. Volvés lento.',
    sets:[{l:'Series',v:'3'},{l:'Reps',v:'15'},{l:'Descanso',v:'60"'}],
    tip:'No bloquees los codos. Excelente para definición de pecho.'},
-  {name:'Press de Hombro en Polea',target:'Deltoides · Tríceps',badge:'badge-upper',
-   exec:'De pie o sentado, poleas bajas a los costados. Brazos a la altura del hombro, codos a 90°. Empujás hacia arriba y bajás controlado.',
-   sets:[{l:'Series',v:'3'},{l:'Reps',v:'10–12'},{l:'Descanso',v:'75"'}],
-   tip:'Tensión constante en todo el recorrido. No arquees la lumbar.'},
   {name:'Elevaciones Laterales Mancuerna',target:'Deltoides medio',badge:'badge-upper',
    exec:'De pie, mancuerna en cada mano. Brazos al costado, codos levemente flexionados. Levantás hacia los costados hasta la altura del hombro y bajás lento.',
    sets:[{l:'Series',v:'3'},{l:'Reps',v:'15'},{l:'Descanso',v:'45"'}],
@@ -765,10 +761,18 @@ const GYM_DAY2=[
    exec:'Polea baja, barra recta o cuerda. Codos fijos al costado. Flexionás hacia los hombros. Bajás completamente.',
    sets:[{l:'Series',v:'3'},{l:'Reps',v:'12–15'},{l:'Descanso',v:'60"'}],
    tip:'Tensión constante en todo el recorrido.'},
-  {name:'Plancha Lateral + Crunch Declinado',target:'Oblicuos · Abdomen',badge:'badge-core',
-   exec:'Plancha lateral: antebrazo y costado del pie, cadera levantada, 30–45" por lado. Crunch declinado: banco declinado, subís despegando la espalda baja.',
-   sets:[{l:'Plancha lat.',v:'3 × 35" c/lado'},{l:'Crunch dec.',v:'3 × 15–20'},{l:'Descanso',v:'45"'}],
-   tip:'En la plancha lateral si es difícil apoyá la rodilla. Progresá semana a semana.'},
+  {name:'Plancha Lateral',target:'Oblicuos · Core lateral',badge:'badge-core',
+   exec:'Apoyado en un antebrazo y el costado del pie, cuerpo recto de cabeza a talones, cadera levantada. Mantenés la posición sin dejar caer la cadera. Repetís del otro lado.',
+   sets:[{l:'Series',v:'3 por lado'},{l:'Tiempo',v:'35–45"'},{l:'Descanso',v:'30"'}],
+   tip:'Si es difícil apoyá la rodilla en lugar del pie. Progresá cuando aguantes los 45" con buena forma.'},
+  {name:'Crunch Declinado',target:'Recto abdominal',badge:'badge-core',
+   exec:'Banco declinado, pies sujetos. Manos detrás de la cabeza. Subís despegando la espalda baja y bajás controlado sin apoyar del todo.',
+   sets:[{l:'Series',v:'3'},{l:'Reps',v:'15–20'},{l:'Descanso',v:'45"'}],
+   tip:'No jalés el cuello. El trabajo es del abdomen.'},
+  {name:'Curl Martillo',target:'Bíceps braquial · Braquial',badge:'badge-upper',
+   exec:'De pie, mancuerna en cada mano con agarre neutro (palmas enfrentadas). Codos pegados al cuerpo y fijos. Flexionás hacia los hombros sin rotar la muñeca. Bajás completamente de forma controlada.',
+   sets:[{l:'Series',v:'3'},{l:'Reps',v:'12'},{l:'Descanso',v:'60"'}],
+   tip:'El agarre neutro trabaja más el braquial que el bíceps — complementa perfecto el curl en polea. No balancees el torso.'},
 ];
 
 const GYM_FULL=[
@@ -804,10 +808,14 @@ const GYM_FULL=[
    exec:'Cuerda alta. Tirás hacia la cara, codos atrás y arriba. Volvés lento.',
    sets:[{l:'Series',v:'2'},{l:'Reps',v:'15'},{l:'Descanso',v:'45"'}],
    tip:'No omitir — fundamental para salud del hombro.'},
-  {name:'Plancha Frontal + Crunch Declinado',target:'Core · Abdomen',badge:'badge-core',
-   exec:'Plancha en antebrazos, cuerpo recto 45–60". Crunch declinado: banco, manos detrás de la cabeza, subís despegando la espalda baja.',
-   sets:[{l:'Plancha',v:'3 × 45–60"'},{l:'Crunch',v:'3 × 15–20'},{l:'Descanso',v:'45"'}],
-   tip:'Al final de la sesión.'},
+  {name:'Plancha Lateral',target:'Oblicuos · Core lateral',badge:'badge-core',
+   exec:'Antebrazo y costado del pie, cadera levantada. Mantenés sin dejar caer la cadera. Repetís del otro lado.',
+   sets:[{l:'Series',v:'3 por lado'},{l:'Tiempo',v:'35–45"'},{l:'Descanso',v:'30"'}],
+   tip:'Apoyá la rodilla si es necesario. Progresá semana a semana.'},
+  {name:'Crunch Declinado',target:'Recto abdominal',badge:'badge-core',
+   exec:'Banco declinado, pies sujetos. Manos detrás de la cabeza. Subís despegando la espalda baja y bajás controlado.',
+   sets:[{l:'Series',v:'3'},{l:'Reps',v:'15–20'},{l:'Descanso',v:'45"'}],
+   tip:'No jalés el cuello. El trabajo es del abdomen.'},
 ];
 
 // ===== RENDER GYM =====
@@ -3077,6 +3085,135 @@ function cleanAllWeightLogs(){
     if(clean.length!==logs[key].length){logs[key]=clean;changed=true;}
   });
   if(changed){s._gymWeights=logs;saveState(s);}
+}
+
+// ===== AI NUTRITION =====
+let _aiMode='calc';
+let _aiLastResult=null;
+
+function setAIMode(mode){
+  _aiMode=mode;
+  const calcBtn=document.getElementById('ai-btn-calc');
+  const suggestBtn=document.getElementById('ai-btn-suggest');
+  const inputArea=document.getElementById('ai-input-area');
+  const foodInput=document.getElementById('ai-food-input');
+  if(mode==='calc'){
+    calcBtn.style.background='rgba(232,255,71,.2)';
+    suggestBtn.style.background='rgba(71,196,255,.08)';
+    inputArea.style.display='block';
+    foodInput.placeholder='Describí el alimento... ej: 200g de pechuga de pollo a la plancha con arroz';
+  } else {
+    calcBtn.style.background='rgba(232,255,71,.08)';
+    suggestBtn.style.background='rgba(71,196,255,.2)';
+    inputArea.style.display='block';
+    foodInput.placeholder='Describí qué comiste hoy y qué macros te faltan... o dejá vacío para sugerencia automática';
+  }
+}
+
+async function askNutriAI(){
+  const input=document.getElementById('ai-food-input').value.trim();
+  const loading=document.getElementById('ai-loading');
+  const responseDiv=document.getElementById('ai-response');
+  const responseText=document.getElementById('ai-response-text');
+  const addBtn=document.getElementById('ai-add-btn');
+
+  loading.style.display='block';
+  responseDiv.style.display='none';
+  addBtn.style.display='none';
+
+  const key=nutriDateKey(nutriCurrentDate);
+  const target=getTarget(key);
+  const nd=getNutriData();
+  const dayData=nd[key]||{};
+
+  let prompt='';
+  if(_aiMode==='calc'){
+    if(!input){loading.style.display='none';alert('Describí el alimento primero');return;}
+    prompt=`Eres un nutricionista deportivo. El usuario come lo siguiente: "${input}".
+Estimá los macronutrientes de forma precisa.
+Responde SOLO con este JSON sin ningún texto adicional ni backticks:
+{"desc":"nombre corto del alimento","kcal":número,"prot":número,"carb":número,"fat":número,"fibra":número}
+Todos los valores en números enteros. kcal totales, prot/carb/fat/fibra en gramos.`;
+  } else {
+    const faltaKcal=Math.max(0,target.kcal-(dayData.kcal||0));
+    const faltaProt=Math.max(0,target.prot-(dayData.prot||0));
+    const faltaCarb=Math.max(0,target.carb-(dayData.carb||0));
+    const faltaFat=Math.max(0,target.fat-(dayData.fat||0));
+    const contextoInput=input?`El usuario dice: "${input}". `:'';
+    prompt=`Eres un nutricionista deportivo trabajando con un corredor amateur que prepara un medio maratón.
+${contextoInput}
+Target del día: ${target.kcal}kcal, ${target.prot}g prot, ${target.carb}g carb, ${target.fat}g grasa.
+Ya consumió: ${dayData.kcal||0}kcal, ${dayData.prot||0}g prot, ${dayData.carb||0}g carb, ${dayData.fat||0}g grasa.
+Le faltan: ${faltaKcal}kcal, ${faltaProt}g prot, ${faltaCarb}g carb, ${faltaFat}g grasa.
+Sugerí 2-3 opciones de alimentos concretos y accesibles para completar los macros faltantes.
+Sé breve, práctico y específico con las porciones. Responde en español rioplatense.`;
+  }
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    const data=await res.json();
+    const text=data.content?.[0]?.text||'';
+
+    loading.style.display='none';
+    responseDiv.style.display='block';
+
+    if(_aiMode==='calc'){
+      try{
+        const clean=text.replace(/```json|```/g,'').trim();
+        const parsed=JSON.parse(clean);
+        _aiLastResult=parsed;
+        responseText.innerHTML=
+          '<div style="font-family:DM Mono,monospace;font-size:11px;margin-bottom:8px;color:var(--accent);">'+parsed.desc+'</div>'+
+          '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;">'+
+          [['kcal',parsed.kcal,'var(--accent)'],['Prot',parsed.prot+'g','#4ade80'],
+           ['Carb',parsed.carb+'g','#fbbf24'],['Grasa',parsed.fat+'g','#fb923c'],
+           ['Fibra',parsed.fibra+'g','var(--accent2)']].map(function(item){
+            return '<div style="background:rgba(255,255,255,.04);border-radius:4px;padding:6px;text-align:center;">'+
+              '<div style="font-family:Bebas Neue,sans-serif;font-size:18px;color:'+item[2]+';">'+item[1]+'</div>'+
+              '<div style="font-family:DM Mono,monospace;font-size:8px;color:var(--muted);">'+item[0]+'</div>'+
+              '</div>';
+          }).join('')+
+          '</div>';
+        addBtn.style.display='block';
+      }catch(e){
+        responseText.textContent=text;
+      }
+    } else {
+      responseText.innerHTML=text.split('\n').join('<br>');
+    }
+  }catch(err){
+    loading.style.display='none';
+    responseDiv.style.display='block';
+    responseText.textContent='Error al conectar con la IA. Verificá tu conexión.';
+  }
+}
+
+function addAIFoodToMeal(){
+  if(!_aiLastResult)return;
+  // Open meals section and add the food
+  document.getElementById('meals-section').classList.add('open');
+  addMealRow({
+    name:'Snack',
+    desc:_aiLastResult.desc,
+    kcal:_aiLastResult.kcal,
+    prot:_aiLastResult.prot,
+    carb:_aiLastResult.carb,
+    fat:_aiLastResult.fat,
+    fibra:_aiLastResult.fibra
+  });
+  // Save to food history
+  saveFoodToHistory(_aiLastResult);
+  recalcMealTotals();
+  // Scroll to meals
+  document.getElementById('meals-section').scrollIntoView({behavior:'smooth'});
 }
 
 // ===== INIT =====
