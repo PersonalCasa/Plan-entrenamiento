@@ -386,7 +386,7 @@ svg.chart{width:100%;overflow:visible;}
   <button class="nav-tab" onclick="showPage('stats',this)">Stats</button>
   <button class="nav-tab" onclick="showPage('nutri',this)">Nutrición</button>
   <div style="flex:1"></div>
-  <span style="font-family:DM Mono,monospace;font-size:9px;color:var(--muted);align-self:center;padding:0 8px;">v2.8</span>
+  <span style="font-family:DM Mono,monospace;font-size:9px;color:var(--muted);align-self:center;padding:0 8px;">v2.9</span>
   <button id="notif-btn" onclick="toggleNotifications()" title="Recordatorios 7:00 AM"
     style="background:none;border:none;cursor:pointer;padding:0 14px;font-size:18px;color:var(--muted);transition:color .2s;display:flex;align-items:center;">🔔</button>
 </div>
@@ -3442,9 +3442,18 @@ function renderPaceCharts(runs){
     buildChart('interval',intervalRuns,'Pasadas / tempo','#fb923c',false);
   pc.innerHTML=chartHTML;
 
-  // Init charts after render
-  if(typeof Chart==='undefined')return;
-  setTimeout(function(){
+  // Init charts after render — use requestAnimationFrame to ensure DOM is ready
+  function tryInitCharts(attempt){
+    if(attempt>10)return;
+    const longEl=document.getElementById('paceChart_long');
+    if(!longEl){
+      setTimeout(function(){tryInitCharts(attempt+1);},200);
+      return;
+    }
+    if(typeof Chart==='undefined'){
+      setTimeout(function(){tryInitCharts(attempt+1);},300);
+      return;
+    }
     function initChart(runs2,containerId,color,showProjection){
       if(!runs2.length)return;
       // Find canvas by scanning for matching id prefix
@@ -3556,7 +3565,8 @@ function renderPaceCharts(runs){
     initChart(longRuns,'long','var(--accent)',true);
     initChart(shortRuns,'short','var(--accent2)',false);
     initChart(intervalRuns,'interval','#fb923c',false);
-  },150);
+  }
+  tryInitCharts(0);
 }
 
 // ===== INIT =====
