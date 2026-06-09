@@ -386,7 +386,7 @@ svg.chart{width:100%;overflow:visible;}
   <button class="nav-tab" onclick="showPage('stats',this)">Stats</button>
   <button class="nav-tab" onclick="showPage('nutri',this)">Nutrición</button>
   <div style="flex:1"></div>
-  <span style="font-family:DM Mono,monospace;font-size:9px;color:var(--muted);align-self:center;padding:0 8px;">v3.3</span>
+  <span style="font-family:DM Mono,monospace;font-size:9px;color:var(--muted);align-self:center;padding:0 8px;">v3.4</span>
   <button id="notif-btn" onclick="toggleNotifications()" title="Recordatorios 7:00 AM"
     style="background:none;border:none;cursor:pointer;padding:0 14px;font-size:18px;color:var(--muted);transition:color .2s;display:flex;align-items:center;">🔔</button>
 </div>
@@ -3399,16 +3399,14 @@ function renderPaceCharts(runs){
   var pc=document.getElementById('pace-chart');
   if(!pc)return;
 
-  // Classify runs by type
   var longRuns=[],shortRuns=[],intervalRuns=[];
-
   runs.filter(function(r){return r.pace&&r.pace!=='—';}).forEach(function(r){
     var paceClean=r.pace.replace(/\s*\/km/,'').trim();
     var parts=paceClean.split(':');
     var paceMin=parseFloat(parts[0])+(parseFloat(parts[1]||0)/60);
     if(!paceMin||isNaN(paceMin)||paceMin<3||paceMin>12)return;
     var d=r.desc||'';
-    var entry={desc:d,pace:r.pace,paceMin:paceMin,dateLabel:r.dateLabel||'',km:r.km,rpe:r.rpe};
+    var entry={desc:d,paceMin:paceMin,dateLabel:r.dateLabel||''};
     if(d.includes('largo')||d.includes('MÁXIMO')||d.includes('moderado'))
       longRuns.push(entry);
     else if(d.includes('Pasadas')||d.includes('pasadas')||d.includes('Tempo')||d.includes('tempo'))
@@ -3417,118 +3415,129 @@ function renderPaceCharts(runs){
       shortRuns.push(entry);
   });
 
-  // Build HTML with canvas placeholders
-  var html='';
-  function chartBlock(id, label, color, runs2, showProj){
+  function fmtPace(v){var m=Math.floor(v);var s=Math.round((v-m)*60);return m+':'+(s<10?'0':'')+s;}
+
+  function makeSVG(runs2, color, showProj){
+    if(!runs2.length) return '';
+    var W=300,H=80,padL=32,padB=20,padT=10,padR=10;
+    var paceVals=runs2.map(function(r){return r.paceMin;});
+    var labels=runs2.map(function(r){return r.dateLabel;});
+
+    // Projection
+    var projPace=null, projPaceCorr=null;
+    if(showProj&&runs2.length>=2){
+      var n=runs2.length;
+      var sumX=0,sumY=0,sumXY=0,sumX2=0;
+      for(var i=0;i<n;i++){sumX+=i;sumY+=paceVals[i];sumXY+=i*paceVals[i];sumX2+=i*i;}
+      var denom=n*sumX2-sumX*sumX;
+      var slope=denom!==0?(n*sumXY-sumX*sumY)/denom:0;
+      var intercept=(sumY-slope*sumX)/n;
+      var cappedSlope=Math.max(-5/60,Math.min(0,slope));
+      var today=new Date();
+      var RACE=new Date('2026-09-06');
+      var weeksLeft=Math.max(0,Math.round((RACE-today)/(7*24*3600*1000)));
+      var remSess=Math.max(1,Math.round(weeksLeft/2));
+      projPace=Math.min(paceVals[n-1],Math.max(4.0,intercept+cappedSlope*(n-1+remSess)));
+      projPaceCorr=projPace*0.92;
+      // Add projection points
+      var projVals=paceVals.map(function(){return null;});
+      projVals[n-1]=paceVals[n-1];
+      for(var j=1;j<=Math.min(3,remSess);j++){
+        paceVals.push(null);
+        projVals.push(Math.min(paceVals[n-1],Math.max(4.0,intercept+cappedSlope*(n-1+j))));
+        labels.push('→');
+      }
+    }
+
+    var allVals=paceVals.concat(projPace?[projPace]:[]).filter(function(v){return v!==null;});
+    var minP=Math.min.apply(null,allVals)-0.3;
+    var maxP=Math.max.apply(null,allVals)+0.3;
+    var totalW=W-padL-padR;
+    var totalH=H-padT-padB;
+    var n2=paceVals.length;
+
+    function xPos(i){return padL+i/(n2>1?n2-1:1)*totalW;}
+    function yPos(v){return padT+totalH-(v-minP)/(maxP-minP)*totalH;}
+
+    // Build SVG
+    var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;display:block;" xmlns="http://www.w3.org/2000/svg">';
+
+    // Grid lines
+    svg+='<line x1="'+padL+'" y1="'+padT+'" x2="'+padL+'" y2="'+(H-padB)+'" stroke="rgba(255,255,255,.08)" stroke-width="1"/>';
+    svg+='<line x1="'+padL+'" y1="'+(H-padB)+'" x2="'+(W-padR)+'" y2="'+(H-padB)+'" stroke="rgba(255,255,255,.08)" stroke-width="1"/>';
+
+    // Y axis labels
+    var yMid=(minP+maxP)/2;
+    [minP,yMid,maxP].forEach(function(v){
+      var y=yPos(v);
+      svg+='<text x="'+(padL-3)+'" y="'+(y+3)+'" text-anchor="end" font-family="DM Mono,monospace" font-size="7" fill="rgba(255,255,255,.4)">'+fmtPace(v)+'</text>';
+    });
+
+    // Projection line
+    if(projPace!==null){
+      var projPoints=[];
+      paceVals.forEach(function(v,i){
+        if(v===null) projPoints.push(null);
+      });
+      // Connect from last real point to projection
+      var lastRealIdx=paceVals.filter(function(v){return v!==null;}).length-1;
+      // Draw dashed projection
+      var projSvgPts='';
+      var prevX=null,prevY=null;
+      paceVals.forEach(function(v,i){
+        if(v!==null){prevX=xPos(i);prevY=yPos(v);}
+      });
+      if(projPace&&prevX!==null){
+        var projX=xPos(n2-1);
+        svg+='<line x1="'+prevX+'" y1="'+prevY+'" x2="'+projX+'" y2="'+yPos(projPace)+'" stroke="rgba(232,255,71,.4)" stroke-width="1.5" stroke-dasharray="4,3"/>';
+      }
+    }
+
+    // Main line
+    var pts=[];
+    paceVals.forEach(function(v,i){if(v!==null)pts.push(xPos(i)+','+yPos(v));});
+    if(pts.length>1)
+      svg+='<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+color+'" stroke-width="2" stroke-linejoin="round"/>';
+
+    // Dots + labels
+    paceVals.forEach(function(v,i){
+      if(v===null)return;
+      var x=xPos(i),y=yPos(v);
+      svg+='<circle cx="'+x+'" cy="'+y+'" r="4" fill="'+color+'"/>';
+      svg+='<text x="'+x+'" y="'+(y-7)+'" text-anchor="middle" font-family="DM Mono,monospace" font-size="7" fill="'+color+'">'+fmtPace(v)+'</text>';
+      if(labels[i]&&labels[i]!=='→')
+        svg+='<text x="'+x+'" y="'+(H-6)+'" text-anchor="middle" font-family="DM Mono,monospace" font-size="7" fill="rgba(255,255,255,.4)">'+labels[i]+'</text>';
+    });
+
+    svg+='</svg>';
+
+    // Projection text
+    var projText='';
+    if(projPace&&projPaceCorr){
+      var raceTime=projPaceCorr*21.097;
+      var rH=Math.floor(raceTime/60),rM=Math.round(raceTime%60);
+      projText='<div style="font-family:DM Mono,monospace;font-size:10px;color:var(--muted);margin-top:6px;padding-top:6px;border-top:1px solid var(--border);">'+
+        '📈 Proyección fondo: <strong style="color:var(--accent)">'+fmtPace(projPace)+'/km</strong> · '+
+        '🏁 Carrera (−8%): <strong style="color:var(--accent2)">'+fmtPace(projPaceCorr)+'/km</strong> · '+
+        '<strong style="color:var(--ok)">'+rH+'h '+String(rM).padStart(2,'0')+'min</strong>'+
+        '</div>';
+    }
+    return svg+projText;
+  }
+
+  function block(label, color, runs2, showProj){
     if(!runs2.length)
       return '<div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:8px;font-family:DM Mono,monospace;font-size:11px;color:var(--muted);">'+label+' — sin datos aún</div>';
     return '<div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:12px;">'+
-      '<div style="font-family:DM Mono,monospace;font-size:10px;letter-spacing:2px;color:'+color+';text-transform:uppercase;margin-bottom:8px;">'+label+' ('+runs2.length+' sesiones) — ritmos: '+runs2.map(function(r){return r.paceMin.toFixed(2);}).join(', ')+'</div>'+
-      '<div style="position:relative;width:100%;height:140px;"><canvas id="'+id+'"></canvas></div>'+
-      (showProj?'<div id="proj-'+id+'" style="font-family:DM Mono,monospace;font-size:10px;color:var(--muted);margin-top:8px;padding-top:6px;border-top:1px solid var(--border);"></div>':'')+
+      '<div style="font-family:DM Mono,monospace;font-size:10px;letter-spacing:2px;color:'+color+';text-transform:uppercase;margin-bottom:8px;">'+label+' ('+runs2.length+' sesiones)</div>'+
+      makeSVG(runs2,color,showProj)+
       '</div>';
   }
 
-  html+=chartBlock('pcLong','Fondo largo','var(--accent)',longRuns,true);
-  html+=chartBlock('pcShort','Fondo corto','var(--accent2)',shortRuns,false);
-  html+=chartBlock('pcInterval','Pasadas / tempo','#fb923c',intervalRuns,false);
-  pc.innerHTML=html;
-
-  // Draw charts after DOM update
-  setTimeout(function(){
-    var RACE_DATE=new Date('2026-09-06');
-    var fmtPace=function(v){var m=Math.floor(v);var s=Math.round((v-m)*60);return m+':'+(s<10?'0':'')+s;};
-    var isDark=matchMedia('(prefers-color-scheme:dark)').matches;
-    var gridColor=isDark?'rgba(255,255,255,.06)':'rgba(0,0,0,.06)';
-    var textColor=isDark?'#aaa':'#888';
-
-    function drawChart(canvasId, runs2, color, showProj){
-      if(!runs2.length)return;
-      var el=document.getElementById(canvasId);
-      if(!el)return;
-      if(typeof Chart==='undefined')return;
-
-      var paceVals=runs2.map(function(r){return r.paceMin;});
-      var labels=runs2.map(function(r){return r.dateLabel;});
-      var minP=Math.min.apply(null,paceVals)-0.3;
-      var maxP=Math.max.apply(null,paceVals)+0.3;
-
-      var datasets=[{
-        label:'Ritmo',
-        data:paceVals,
-        borderColor:color,
-        backgroundColor:color==='var(--accent)'?'rgba(232,255,71,.08)':color==='var(--accent2)'?'rgba(71,196,255,.08)':'rgba(251,146,60,.08)',
-        pointBackgroundColor:color,
-        pointRadius:5,
-        tension:0.3,
-        fill:false
-      }];
-
-      // Projection for fondo largo
-      if(showProj&&runs2.length>=2){
-        var n=runs2.length;
-        var sumX=0,sumY=0,sumXY=0,sumX2=0;
-        for(var i=0;i<n;i++){sumX+=i;sumY+=paceVals[i];sumXY+=i*paceVals[i];sumX2+=i*i;}
-        var denom=n*sumX2-sumX*sumX;
-        var slope=denom!==0?(n*sumXY-sumX*sumY)/denom:0;
-        var intercept=(sumY-slope*sumX)/n;
-        var cappedSlope=Math.max(-5/60,Math.min(0,slope));
-        var today=new Date();
-        var weeksLeft=Math.max(0,Math.round((RACE_DATE-today)/(7*24*3600*1000)));
-        var remSess=Math.round(weeksLeft/2);
-        var projPace=Math.min(paceVals[n-1],Math.max(4.0,intercept+cappedSlope*(n-1+remSess)));
-        var projLabels=labels.slice();
-        var projData=paceVals.map(function(){return null;});
-        projData[n-1]=paceVals[n-1];
-        for(var j=1;j<=Math.min(4,remSess);j++){
-          projLabels.push('→');
-          projData.push(Math.min(paceVals[n-1],Math.max(4.0,intercept+cappedSlope*(n-1+j))));
-        }
-        labels=projLabels;
-        datasets[0].data=paceVals.concat(new Array(Math.min(4,remSess)).fill(null));
-        datasets.push({
-          label:'Proyección',
-          data:projData,
-          borderColor:'rgba(232,255,71,.5)',
-          borderDash:[6,4],
-          pointRadius:0,
-          tension:0.3,
-          fill:false,
-          spanGaps:true
-        });
-        // Show projection text
-        var projEl=document.getElementById('proj-'+canvasId);
-        if(projEl){
-          var racePaceCorr=projPace*0.92;
-          var raceTime=racePaceCorr*21.097;
-          var rH=Math.floor(raceTime/60),rM=Math.round(raceTime%60);
-          projEl.innerHTML='📈 Proyección fondo: <strong style="color:var(--accent)">'+fmtPace(projPace)+'/km</strong> · '+
-            '🏁 Carrera (−8%): <strong style="color:var(--accent2)">'+fmtPace(racePaceCorr)+'/km</strong> · '+
-            '<strong style="color:var(--ok)">'+rH+'h '+String(rM).padStart(2,'0')+'min</strong>';
-        }
-      }
-
-      var existing=Chart.getChart(el);
-      if(existing)existing.destroy();
-      new Chart(el,{
-        type:'line',
-        data:{labels:labels,datasets:datasets},
-        options:{
-          responsive:true,maintainAspectRatio:false,
-          plugins:{legend:{display:false}},
-          scales:{
-            x:{grid:{color:gridColor},ticks:{color:textColor,font:{size:10}}},
-            y:{reverse:true,grid:{color:gridColor},min:minP,max:maxP,
-               ticks:{color:textColor,font:{size:10},callback:fmtPace}}
-          }
-        }
-      });
-    }
-
-    drawChart('pcLong',longRuns,'var(--accent)',true);
-    drawChart('pcShort',shortRuns,'var(--accent2)',false);
-    drawChart('pcInterval',intervalRuns,'#fb923c',false);
-  },300);
+  pc.innerHTML=
+    block('Fondo largo','var(--accent)',longRuns,true)+
+    block('Fondo corto','var(--accent2)',shortRuns,false)+
+    block('Pasadas / tempo','#fb923c',intervalRuns,false);
 }
 
 
