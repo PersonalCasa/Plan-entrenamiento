@@ -2664,12 +2664,8 @@ function exportToPDF(){
     '</div></div>'+
 
     // TRAINING SYSTEM DESCRIPTION
-    '<div class="section" style="background:#f9f9f9;border-left:4px solid #e8ff47;padding:20px 36px;">'+
-    '<h3 style="margin-bottom:12px;">📋 Sistema de entrenamiento</h3>'+
-    '<p style="font-size:12px;color:#444;line-height:1.8;margin-bottom:16px;">'+
-    'Plan de 16 semanas de preparación para el <strong>Medio Maratón de Punta del Este (6 de septiembre de 2026)</strong>, '+
-    'con 3 sesiones semanales que alternan entre running y gimnasio de fuerza.'+
-    '</p>'+
+    '<div class="section" style="background:#f9f9f9;border-left:4px solid #e8ff47;padding:14px 36px;">'+
+    '<h3 style="margin-bottom:6px;font-size:14px;">📋 Sistema de entrenamiento — 16 semanas · 3 sesiones/semana · Running + Fuerza</h3>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">'+
       '<div style="background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:14px;">'+
         '<div style="font-size:13px;font-weight:700;margin-bottom:8px;color:#0a0a0f;">Semanas A — 1 corrida · 2 gym</div>'+
@@ -2753,17 +2749,7 @@ function exportToPDF(){
     '<div style="position:relative;width:100%;height:200px;"><canvas id="pdfWeightChart" role="img" aria-label="Peso corporal">'+weights.map(function(w){return w.date+': '+w.kg+'kg';}).join(', ')+'</canvas></div>'+
     '</div>':'')+ 
 
-    // Pace chart for PDF
-    (paceRunsWithPace&&paceRunsWithPace.length>=2?
-    '<div class="section">'+
-    '<h3>🏃 Evolución de ritmo por tipo de sesión</h3>'+
-    '<div style="display:flex;gap:16px;font-size:11px;color:#888;margin-bottom:8px;">'+
-    '<span style="display:flex;align-items:center;gap:4px;"><span style="width:16px;height:2px;background:#185fa5;display:inline-block;"></span>Fondo largo</span>'+
-    '<span style="display:flex;align-items:center;gap:4px;"><span style="width:16px;height:2px;background:#5dcaa5;display:inline-block;border-top:2px dashed #5dcaa5;"></span>Fondo corto</span>'+
-    '<span style="display:flex;align-items:center;gap:4px;"><span style="width:16px;height:2px;background:#ba7517;display:inline-block;border-top:2px dashed #ba7517;"></span>Pasadas/tempo</span>'+
-    '</div>'+
-    '<div style="position:relative;width:100%;height:200px;"><canvas id="pdfPaceChart" role="img" aria-label="Ritmo por tipo de sesion">Ritmo de corridas a lo largo del plan.</canvas></div>'+
-    '</div>':'')+ 
+
 
     (avgKcal?
     '<div class="section">'+
@@ -2796,36 +2782,7 @@ function exportToPDF(){
             scales:{x:{ticks:{font:{size:10}}},y:{min:wMin,max:wMax,ticks:{callback:function(v){return v+'kg';},font:{size:10}}}}}});
       }
     }
-    // Init pace chart in PDF
-    if(paceRunsWithPace&&paceRunsWithPace.length>=2){
-      var pEl=win.document.getElementById('pdfPaceChart');
-      if(pEl&&win.Chart){
-        var fmtP=function(p){var pt=p.split(':');return parseFloat(pt[0])+(parseFloat(pt[1]||0)/60);};
-        var fmtL=function(v){var m=Math.floor(v);var s=Math.round((v-m)*60);return m+':'+(s<10?'0':'')+s;};
-        var longP=[],shortP=[],intP=[];
-        paceRunsWithPace.forEach(function(r){
-          var pv=fmtP(r.pace.replace(/\s*\/km/,'').trim());
-          var t=(r.desc.includes('largo')||r.desc.includes('MÁXIMO')||r.desc.includes('moderado'))?'long':
-               (r.desc.includes('Pasadas')||r.desc.includes('pasadas')||r.desc.includes('Tempo')||r.desc.includes('tempo'))?'int':'short';
-          if(t==='long')longP.push({date:r.date,pace:pv});
-          else if(t==='int')intP.push({date:r.date,pace:pv});
-          else shortP.push({date:r.date,pace:pv});
-        });
-        var allDates=[].concat(longP,shortP,intP).map(function(r){return r.date;}).filter(function(v,i,a){return a.indexOf(v)===i;}).sort();
-        new win.Chart(pEl,{type:'line',
-          data:{labels:allDates,datasets:[
-            {label:'Fondo largo',data:allDates.map(function(d){var f=longP.find(function(r){return r.date===d;});return f?f.pace:null;}),
-             borderColor:'#185fa5',pointBackgroundColor:'#185fa5',pointRadius:5,tension:0.3,spanGaps:false,fill:false},
-            {label:'Fondo corto',data:allDates.map(function(d){var f=shortP.find(function(r){return r.date===d;});return f?f.pace:null;}),
-             borderColor:'#5dcaa5',pointBackgroundColor:'#5dcaa5',pointRadius:5,tension:0.3,spanGaps:false,fill:false,borderDash:[4,3]},
-            {label:'Pasadas',data:allDates.map(function(d){var f=intP.find(function(r){return r.date===d;});return f?f.pace:null;}),
-             borderColor:'#ba7517',pointBackgroundColor:'#ba7517',pointRadius:5,tension:0.3,spanGaps:false,fill:false,borderDash:[5,3]},
-          ]},
-          options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-            scales:{x:{ticks:{font:{size:10}}},
-              y:{reverse:true,ticks:{callback:fmtL,font:{size:10}},min:4.0,max:7.5}}}});
-      }
-    }
+
     setTimeout(function(){win.print();},600);
   },800);
 }
