@@ -1164,8 +1164,18 @@ function buildCard(w,isCurrent,isPast){
     const s=movedHere||origSess;
     const pc=s?PIP_CLS[s.cls]||'pip-empty':'pip-empty';
     const pi=s?PIP_ICO[s.cls]||'':'';
-    const movedStyle=movedHere&&!sMap[di]?'outline:1px dashed var(--accent2);border-radius:50%;':'';
-    return '<div class="cal-day"><span class="cdn">'+name+'</span><span class="cdd">'+days[di].getDate()+'</span><div class="cal-pip '+pc+'" style="'+movedStyle+'">'+pi+'</div></div>';
+    // Check completion status
+    const sessK=s?sessKey(w.n,s.d):null;
+    const sessState=sessK?state[sessK]||{}:{};
+    const isDone=sessState.status==='done';
+    const isMissed=sessState.status==='missed';
+    // Glow border for completed, dim for missed, dashed for moved
+    let pipStyle='';
+    if(isDone) pipStyle='box-shadow:0 0 0 2px var(--ok),0 0 6px var(--ok);opacity:1;';
+    else if(isMissed) pipStyle='opacity:.35;';
+    else if(movedHere&&!sMap[di]) pipStyle='outline:1px dashed var(--accent2);border-radius:50%;';
+    return '<div class="cal-day"><span class="cdn">'+name+'</span><span class="cdd">'+days[di].getDate()+'</span>'+
+      '<div class="cal-pip '+pc+'" style="'+pipStyle+'">'+pi+'</div></div>';
   }).join('');
 
   const sess=w.sess.map(s=>{
