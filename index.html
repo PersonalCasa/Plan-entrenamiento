@@ -386,7 +386,7 @@ svg.chart{width:100%;overflow:visible;}
   <button class="nav-tab" onclick="showPage('stats',this)">Stats</button>
   <button class="nav-tab" onclick="showPage('nutri',this)">Nutrición</button>
   <div style="flex:1"></div>
-  <span style="font-family:DM Mono,monospace;font-size:9px;color:var(--muted);align-self:center;padding:0 8px;">v3.7</span>
+  <span style="font-family:DM Mono,monospace;font-size:9px;color:var(--muted);align-self:center;padding:0 8px;">v3.8</span>
   <button id="notif-btn" onclick="toggleNotifications()" title="Recordatorios 7:00 AM"
     style="background:none;border:none;cursor:pointer;padding:0 14px;font-size:18px;color:var(--muted);transition:color .2s;display:flex;align-items:center;">🔔</button>
 </div>
@@ -2531,40 +2531,24 @@ function exportToPDF(){
   const nd=s._nutri||{};
   const weights=s._weights||[];
   const target=getTarget(null);
-
-  // ── Completed runs ──
   const runs=[];
-  var paceRunsWithPace=[];
   WEEKS.forEach(function(w){
     var days=weekDays(w.n-1);
     w.sess.filter(function(se){return se.isRun;}).forEach(function(sess){
       var key=sessKey(w.n,sess.d);
       var st=s[key]||{};
+      if(st.status!=='done')return;
       var d=days[sess.d];
-      // Use real date if session was moved
-      var displayDate=st.realDate?st.realDate.split('-').reverse().slice(0,2).join('/'):d.getDate()+'/'+(d.getMonth()+1);
-      if(st.pace&&st.pace!=='—') paceRunsWithPace.push({desc:sess.desc,pace:st.pace,date:displayDate});
-      runs.push({
-        date:displayDate,
-        desc:sess.desc,
-        km:st.distReal||sess.km||'',
-        time:st.time||'—',
-        pace:st.pace||'—',
-        rpe:st.rpe||'—',
-        status:st.status||'pending'
-      });
+      var dd=st.realDate?st.realDate.split('-').reverse().slice(0,2).join('/'):d.getDate()+'/'+(d.getMonth()+1);
+      runs.push({date:dd,desc:sess.desc,km:st.distReal||sess.km||'',time:st.time||'—',pace:st.pace||'—',rpe:st.rpe||'—'});
     });
   });
-
-  // ── Training progress ──
   var totalSessions=0;
   WEEKS.forEach(function(w){totalSessions+=w.sess.length;});
   var doneSessions=Object.values(s).filter(function(v){return v&&v.status==='done';}).length;
   var missedSessions=Object.values(s).filter(function(v){return v&&v.status==='missed';}).length;
   var completedPct=totalSessions>0?Math.round(doneSessions/totalSessions*100):0;
-  var totalKmDone=runs.filter(function(r){return r.status==='done';}).reduce(function(a,r){return a+(parseFloat(r.km)||0);},0);
-
-  // ── Nutrition averages ──
+  var totalKmDone=runs.reduce(function(a,r){return a+(parseFloat(r.km)||0);},0);
   var todayPdf=(new Date()).toISOString().split('T')[0];
   var nutriVals=Object.entries(nd).filter(function(e){return e[1]&&e[1].kcal&&e[0]!==todayPdf;}).map(function(e){return e[1];});
   var avgKcal=nutriVals.length?Math.round(nutriVals.reduce(function(a,v){return a+(v.kcal||0);},0)/nutriVals.length):null;
@@ -2572,840 +2556,57 @@ function exportToPDF(){
   var avgCarb=nutriVals.length?Math.round(nutriVals.reduce(function(a,v){return a+(v.carb||0);},0)/nutriVals.length):null;
   var avgFat=nutriVals.length?Math.round(nutriVals.reduce(function(a,v){return a+(v.fat||0);},0)/nutriVals.length):null;
   var avgFibra=nutriVals.length?Math.round(nutriVals.reduce(function(a,v){return a+(v.fibra||0);},0)/nutriVals.length):null;
-
-  // ── Weight chart SVG ──
-  var weightChartSVG='';
-  if(weights.length>=2){
-    var kgs=weights.map(function(w){return w.kg;});
-    var minK=Math.min.apply(null,kgs)-1;
-    var maxK=Math.max.apply(null,kgs)+1;
-    var W=500,H=120,pad=30;
-    var xS=function(i){return pad+(i/(weights.length-1))*(W-pad*2);};
-    var yS=function(k){return H-pad-(k-minK)/(maxK-minK)*(H-pad*2);};
-    var pts=weights.map(function(w,i){return xS(i)+','+yS(w.kg);}).join(' ');
-    var firstKg=kgs[0],lastKg=kgs[kgs.length-1];
-    var diff=(lastKg-firstKg).toFixed(1);
-    var diffColor=parseFloat(diff)<=0?'#4ade80':'#f87171';
-    var dots=weights.map(function(w,i){
-      return '<circle cx="'+xS(i)+'" cy="'+yS(w.kg)+'" r="4" fill="#47c4ff"/>'+
-        '<text x="'+xS(i)+'" y="'+(yS(w.kg)-8)+'" text-anchor="middle" font-family="Arial" font-size="9" fill="#666">'+w.kg+'</text>';
-    }).join('');
-    var xLabels=weights.map(function(w,i){
-      return '<text x="'+xS(i)+'" y="'+(H-8)+'" text-anchor="middle" font-family="Arial" font-size="8" fill="#888">'+w.date.slice(5)+'</text>';
-    }).join('');
-    weightChartSVG='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;max-width:500px;display:block;margin:12px 0">'+
-      '<polyline points="'+pts+'" fill="none" stroke="#47c4ff" stroke-width="2.5" stroke-linejoin="round"/>'+
-      dots+xLabels+
-      '<text x="'+(W-pad+5)+'" y="'+(yS(target.kcal||2000)+4)+'" font-family="Arial" font-size="8" fill="#aaa">'+
-        (parseFloat(diff)<=0?'▼ ':'▲ ')+Math.abs(parseFloat(diff))+'kg'+
-      '</text></svg>';
-  }
-
-  // ── Progress ring SVG ──
   var r2=54,circ=2*Math.PI*r2;
-  var dashArr=((completedPct/100)*circ).toFixed(1)+' '+circ.toFixed(1);
-  var progressRing='<svg width="140" height="140" viewBox="0 0 140 140">'+
-    '<circle cx="70" cy="70" r="'+r2+'" fill="none" stroke="#2a2a3a" stroke-width="10"/>'+
-    '<circle cx="70" cy="70" r="'+r2+'" fill="none" stroke="#e8ff47" stroke-width="10"'+
-      ' stroke-dasharray="'+dashArr+'" stroke-dashoffset="0"'+
-      ' transform="rotate(-90 70 70)" stroke-linecap="round"/>'+
-    '<text x="70" y="62" text-anchor="middle" font-family="Arial" font-size="26" font-weight="bold" fill="#e8ff47">'+completedPct+'%</text>'+
-    '<text x="70" y="80" text-anchor="middle" font-family="Arial" font-size="10" fill="#888">completado</text>'+
-    '<text x="70" y="96" text-anchor="middle" font-family="Arial" font-size="9" fill="#aaa">'+doneSessions+'/'+totalSessions+' sesiones</text>'+
-    '</svg>';
-
-  // ── Pace sparkline SVG ──
-  var paceRunsWithPace=runs.filter(function(r){return r.pace&&r.pace!=='—';});
-  var paceSVG='';
-  if(paceRunsWithPace.length>=2){
-    var paceVals=paceRunsWithPace.map(function(r){
-      var p=r.pace.split(':');return parseFloat(p[0])+(parseFloat(p[1]||0)/60);
-    });
-    var minP=Math.min.apply(null,paceVals)-0.2;
-    var maxP=Math.max.apply(null,paceVals)+0.2;
-    var PW=400,PH=80,ppad=20;
-    var pxS=function(i){return ppad+(i/(paceVals.length-1))*(PW-ppad*2);};
-    var pyS=function(p){return PH-ppad-(p-minP)/(maxP-minP)*(PH-ppad*2);};
-    var ppts=paceVals.map(function(p,i){return pxS(i)+','+pyS(p);}).join(' ');
-    var pDiff=paceVals[paceVals.length-1]-paceVals[0];
-    var pDiffColor=pDiff<=0?'#4ade80':'#f87171';
-    paceSVG='<p style="font-size:11px;color:#666;margin-bottom:4px;">Evolución de ritmo — '+(pDiff<=0?'▼ mejorando':'▲ subiendo')+' '+(Math.abs(pDiff)*60).toFixed(0)+'seg/km</p>'+
-      '<svg viewBox="0 0 '+PW+' '+PH+'" style="width:100%;max-width:400px;display:block">'+
-      '<polyline points="'+ppts+'" fill="none" stroke="'+pDiffColor+'" stroke-width="2" stroke-linejoin="round"/>'+
-      paceVals.map(function(p,i){return '<circle cx="'+pxS(i)+'" cy="'+pyS(p)+'" r="3" fill="'+pDiffColor+'"/>';}).join('')+
-      '</svg>';
-  }
-
-  // ── RPE color helper ──
-  var rpeColors=['','#4ade80','#86efac','#86efac','#fbbf24','#fbbf24','#fb923c','#f87171','#ef4444','#dc2626','#991b1b'];
-
-  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>RunPlan — Reporte</title><style>'+
-    'body{font-family:Arial,sans-serif;font-size:12px;color:#1a1a1a;margin:0;padding:0;background:#fff;}'+
-    '.cover{background:#0a0a0f;color:#fff;padding:40px 36px 32px;position:relative;overflow:hidden;}'+
-    '.cover::before{content:"21.1";font-size:180px;color:rgba(232,255,71,0.06);position:absolute;right:-10px;top:-20px;line-height:1;font-weight:900;}'+
-    '.cover h1{font-size:36px;font-weight:900;margin:0 0 4px;color:#e8ff47;letter-spacing:1px;}'+
-    '.cover h2{font-size:16px;font-weight:400;color:#aaa;margin:0 0 24px;}'+
-    '.cover-meta{display:flex;gap:32px;flex-wrap:wrap;}'+
-    '.cover-meta-item{display:flex;flex-direction:column;gap:2px;}'+
-    '.cover-meta-label{font-size:9px;letter-spacing:2px;color:#666;text-transform:uppercase;}'+
-    '.cover-meta-value{font-size:14px;font-weight:700;color:#e8e8f0;}'+
-    '.section{padding:24px 36px;border-bottom:3px solid #f0f0f0;}'+
-    '.section:last-child{border-bottom:none;}'+
-    'h3{font-size:18px;font-weight:900;margin:0 0 16px;color:#0a0a0f;letter-spacing:.5px;}'+
-    '.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}'+
-    '.grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}'+
-    '.kpi{background:#f8f8f8;border-radius:8px;padding:14px 16px;border-left:4px solid #e8ff47;}'+
-    '.kpi.green{border-left-color:#4ade80;}.kpi.blue{border-left-color:#47c4ff;}.kpi.orange{border-left-color:#fb923c;}.kpi.red{border-left-color:#f87171;}'+
-    '.kpi-val{font-size:28px;font-weight:900;color:#111;line-height:1;}'+
-    '.kpi-label{font-size:10px;color:#888;margin-top:3px;text-transform:uppercase;letter-spacing:1px;}'+
-    '.kpi-sub{font-size:10px;color:#aaa;margin-top:2px;}'+
-    'table{width:100%;border-collapse:collapse;font-size:11px;}'+
-    'th{background:#0a0a0f;color:#e8ff47;padding:7px 10px;text-align:left;font-size:10px;letter-spacing:1px;text-transform:uppercase;}'+
-    'td{padding:6px 10px;border-bottom:1px solid #f0f0f0;}'+
-    'tr:nth-child(even) td{background:#fafafa;}'+
-    '.done{color:#16a34a;font-weight:700;}.missed{color:#dc2626;}.pending{color:#9ca3af;}'+
-    '.progress-wrap{display:flex;align-items:center;gap:24px;margin-bottom:8px;}'+
-    '@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}'+
-    '</style></head><body>'+
-
-    // COVER
-    '<div class="cover">'+
-    '<h1>MEDIO MARATÓN</h1>'+
-    '<h2>Punta del Este · 6 Sep 2026 · RunPlan</h2>'+
-    '<div class="cover-meta">'+
-    '<div class="cover-meta-item"><span class="cover-meta-label">Exportado</span><span class="cover-meta-value">'+new Date().toLocaleDateString('es-UY')+'</span></div>'+
-    '<div class="cover-meta-item"><span class="cover-meta-label">Km corridos</span><span class="cover-meta-value">'+totalKmDone.toFixed(1)+' km</span></div>'+
-    '<div class="cover-meta-item"><span class="cover-meta-label">Sesiones</span><span class="cover-meta-value">'+doneSessions+' ✓ · '+missedSessions+' ✗</span></div>'+
-    (weights.length?'<div class="cover-meta-item"><span class="cover-meta-label">Último peso</span><span class="cover-meta-value">'+weights[weights.length-1].kg+' kg</span></div>':'')+
+  var ring='<svg width="130" height="130" viewBox="0 0 140 140"><circle cx="70" cy="70" r="54" fill="none" stroke="#222" stroke-width="10"/><circle cx="70" cy="70" r="54" fill="none" stroke="#e8ff47" stroke-width="10" stroke-dasharray="'+(completedPct/100*circ).toFixed(1)+' '+circ.toFixed(1)+'" stroke-dashoffset="0" transform="rotate(-90 70 70)" stroke-linecap="round"/><text x="70" y="63" text-anchor="middle" font-family="Arial" font-size="24" font-weight="bold" fill="#e8ff47">'+completedPct+'%</text><text x="70" y="80" text-anchor="middle" font-family="Arial" font-size="10" fill="#888">completado</text><text x="70" y="96" text-anchor="middle" font-family="Arial" font-size="9" fill="#aaa">'+doneSessions+'/'+totalSessions+'</text></svg>';
+  var rC=['','#4ade80','#86efac','#86efac','#fbbf24','#fbbf24','#fb923c','#f87171','#ef4444','#dc2626','#991b1b'];
+  function nS(val,tgt,unit){if(val===null)return'—';var d=val-tgt;if(Math.abs(d)/tgt<=0.10)return'<span style="color:#16a34a">justo</span>';if(d>0)return'<span style="color:#dc2626">+'+Math.round(d)+unit+' pasado</span>';return'<span style="color:#2563eb">'+Math.round(d)+unit+' faltante</span>';}
+  var css='body{font-family:Arial,sans-serif;font-size:12px;margin:0;}.cv{background:#0a0a0f;color:#fff;padding:24px 28px;position:relative;overflow:hidden;}.cv::before{content:"21.1";font-size:140px;color:rgba(232,255,71,.05);position:absolute;right:-5px;top:-10px;line-height:1;font-weight:900;}.cv h1{font-size:26px;font-weight:900;margin:0 0 2px;color:#e8ff47;}.cv h2{font-size:12px;color:#aaa;margin:0 0 14px;}.meta{display:flex;gap:20px;flex-wrap:wrap;}.ml{font-size:8px;letter-spacing:2px;color:#555;text-transform:uppercase;}.mv{font-size:12px;font-weight:700;color:#e8e8f0;}.sec{padding:14px 28px;border-bottom:2px solid #f0f0f0;}h3{font-size:13px;font-weight:900;margin:0 0 10px;}.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}.g5{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;}.k{background:#f8f8f8;border-radius:5px;padding:8px 10px;border-left:3px solid #e8ff47;}.k.gr{border-left-color:#4ade80;}.k.bl{border-left-color:#47c4ff;}.k.or{border-left-color:#fb923c;}.k.re{border-left-color:#f87171;}.kv{font-size:20px;font-weight:900;color:#111;line-height:1;}.kl{font-size:9px;color:#888;margin-top:2px;text-transform:uppercase;letter-spacing:1px;}.ks{font-size:10px;color:#555;margin-top:2px;}table{width:100%;border-collapse:collapse;font-size:10px;}th{background:#0a0a0f;color:#e8ff47;padding:5px 8px;text-align:left;font-size:9px;text-transform:uppercase;}td{padding:4px 8px;border-bottom:1px solid #f0f0f0;}.sb{background:#f9f9f9;border:1px solid #e0e0e0;border-radius:4px;padding:7px 9px;font-size:10px;line-height:1.7;}.sb strong{font-size:10px;display:block;margin-bottom:2px;}.pw{display:flex;align-items:center;gap:16px;margin-bottom:8px;}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}';
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>RunPlan</title><style>'+css+'</style></head><body>'+
+    '<div class="cv"><h1>MEDIO MARATÓN</h1><h2>Punta del Este · 6 Sep 2026 · RunPlan</h2>'+
+    '<div class="meta">'+
+    '<div><div class="ml">Exportado</div><div class="mv">'+new Date().toLocaleDateString('es-UY')+'</div></div>'+
+    '<div><div class="ml">Km corridos</div><div class="mv">'+totalKmDone.toFixed(1)+' km</div></div>'+
+    '<div><div class="ml">Sesiones</div><div class="mv">'+doneSessions+' ✓ · '+missedSessions+' ✗</div></div>'+
+    (weights.length?'<div><div class="ml">Último peso</div><div class="mv">'+weights[weights.length-1].kg+' kg</div></div>':'')+
     '</div></div>'+
-
-    // TRAINING SYSTEM DESCRIPTION
-    '<div class="section" style="background:#f9f9f9;border-left:4px solid #e8ff47;padding:14px 36px;">'+
-    '<h3 style="margin-bottom:6px;font-size:14px;">📋 Sistema de entrenamiento — 16 semanas · 3 sesiones/semana · Running + Fuerza</h3>'+
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">'+
-      '<div style="background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:14px;">'+
-        '<div style="font-size:13px;font-weight:700;margin-bottom:8px;color:#0a0a0f;">Semanas A — 1 corrida · 2 gym</div>'+
-        '<div style="font-size:11px;color:#555;line-height:1.7;">'+
-          '🏃 <strong>Mar:</strong> Fondo largo Z2 (15–21 km)<br>'+
-          '💪 <strong>Jue:</strong> Gym tren inferior (sentadilla, peso muerto, aductores, gemelos, core)<br>'+
-          '💪 <strong>Sáb:</strong> Gym tren superior (pecho, espalda, hombros, bíceps, tríceps, core)'+
-        '</div>'+
-      '</div>'+
-      '<div style="background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:14px;">'+
-        '<div style="font-size:13px;font-weight:700;margin-bottom:8px;color:#0a0a0f;">Semanas B — 2 corridas · 1 gym</div>'+
-        '<div style="font-size:11px;color:#555;line-height:1.7;">'+
-          '⚡ <strong>Mar:</strong> Pasadas / tempo Z4 (intervalos de velocidad)<br>'+
-          '💪 <strong>Jue:</strong> Gym full body (tren completo, poleas y mancuernas)<br>'+
-          '🔄 <strong>Dom:</strong> Fondo corto Z2 (9–13 km, recuperación activa)'+
-        '</div>'+
-      '</div>'+
-    '</div>'+
-    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">'+
-      '<div style="text-align:center;padding:10px;background:#fff;border:1px solid #e0e0e0;border-radius:6px;">'+
-        '<div style="font-size:18px;font-weight:700;">16</div><div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;">Semanas</div></div>'+
-      '<div style="text-align:center;padding:10px;background:#fff;border:1px solid #e0e0e0;border-radius:6px;">'+
-        '<div style="font-size:18px;font-weight:700;">311 km</div><div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;">Running total</div></div>'+
-      '<div style="text-align:center;padding:10px;background:#fff;border:1px solid #e0e0e0;border-radius:6px;">'+
-        '<div style="font-size:18px;font-weight:700;">3</div><div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;">Sesiones/semana</div></div>'+
-      '<div style="text-align:center;padding:10px;background:#fff;border:1px solid #e0e0e0;border-radius:6px;">'+
-        '<div style="font-size:18px;font-weight:700;">~90 min</div><div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;">Por sesión gym</div></div>'+
-    '</div>'+
-    '</div>'+
-
-    // TRAINING PROGRESS
-    '<div class="section">'+
-    '<h3>📊 Progreso del plan</h3>'+
-    '<div class="progress-wrap">'+progressRing+
-    '<div class="grid-2" style="flex:1">'+
-    '<div class="kpi"><div class="kpi-val" style="color:#e8ff47">'+doneSessions+'</div><div class="kpi-label">Sesiones completadas</div></div>'+
-    '<div class="kpi red"><div class="kpi-val" style="color:#f87171">'+missedSessions+'</div><div class="kpi-label">Sesiones no realizadas</div></div>'+
-    '<div class="kpi blue"><div class="kpi-val" style="color:#47c4ff">'+totalKmDone.toFixed(1)+'</div><div class="kpi-label">Km corridos</div></div>'+
-    '<div class="kpi green"><div class="kpi-val" style="color:#4ade80">'+completedPct+'%</div><div class="kpi-label">Sesiones completadas</div><div class="kpi-sub">'+doneSessions+' de '+totalSessions+'</div></div>'+
+    '<div class="sec"><h3 style="font-size:11px;margin-bottom:7px;">📋 Sistema — 16 semanas · 3 sesiones/semana · Running + Fuerza</h3>'+
+    '<div class="g2">'+
+    '<div class="sb"><strong>Semanas A — 1 corrida · 2 gym</strong>🏃 Mar: Fondo largo Z2 (15–21 km)<br>💪 Jue: Gym tren inferior · 💪 Sáb: Gym tren superior</div>'+
+    '<div class="sb"><strong>Semanas B — 2 corridas · 1 gym</strong>⚡ Mar: Pasadas/tempo Z4<br>💪 Jue: Gym full body · 🔄 Dom: Fondo corto Z2</div>'+
+    '</div></div>'+
+    '<div class="sec"><h3>📊 Progreso</h3><div class="pw">'+ring+
+    '<div class="g2" style="flex:1">'+
+    '<div class="k"><div class="kv" style="color:#e8ff47">'+doneSessions+'</div><div class="kl">Sesiones ✓</div><div class="ks">de '+totalSessions+' totales</div></div>'+
+    '<div class="k bl"><div class="kv" style="color:#47c4ff">'+totalKmDone.toFixed(1)+'</div><div class="kl">Km corridos</div></div>'+
     '</div></div></div>'+
-
-    // RUNS
-    '<div class="section">'+
-    '<h3>🏃 Historial de corridas</h3>'+
-    (paceSVG?'<div style="margin-bottom:16px;">'+paceSVG+'</div>':'')+
-    '<table><tr><th>Fecha</th><th>Sesión</th><th>Km</th><th>Tiempo</th><th>Ritmo</th><th>RPE</th><th>Estado</th></tr>'+
-    runs.map(function(r){
-      var rpeHtml=r.rpe&&r.rpe!=='—'?'<span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:'+rpeColors[r.rpe]+';color:#000;font-size:9px;font-weight:700;text-align:center;line-height:20px;">'+r.rpe+'</span>':'—';
-      return '<tr><td>'+r.date+'</td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+r.desc+'</td><td>'+r.km+'</td><td>'+r.time+'</td><td style="font-weight:700;color:#e8a800">'+r.pace+'</td><td style="text-align:center">'+rpeHtml+'</td><td class="'+r.status+'">'+(r.status==='done'?'✓ Completado':r.status==='missed'?'✗ No realizado':'Pendiente')+'</td></tr>';
-    }).join('')+
+    '<div class="sec"><h3>🏃 Corridas completadas</h3>'+
+    '<table><tr><th>Fecha</th><th>Sesión</th><th>Km</th><th>Tiempo</th><th>Ritmo</th><th>RPE</th></tr>'+
+    runs.map(function(r){var rh=r.rpe&&r.rpe!=='—'?'<span style="display:inline-block;width:15px;height:15px;border-radius:50%;background:'+rC[r.rpe]+';color:#000;font-size:8px;font-weight:700;text-align:center;line-height:15px;">'+r.rpe+'</span>':'—';return'<tr><td>'+r.date+'</td><td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+r.desc+'</td><td>'+r.km+'</td><td>'+r.time+'</td><td style="font-weight:700;color:#e8a800">'+r.pace+'</td><td style="text-align:center">'+rh+'</td></tr>';}).join('')+
     '</table></div>'+
-
-    // BODY CONDITION
-    (weights.length?
-    '<div class="section">'+
-    '<h3>⚖️ Condición corporal</h3>'+
-    '<div class="grid-4" style="margin-bottom:16px;">'+
-    '<div class="kpi blue"><div class="kpi-val" style="color:#47c4ff">'+weights[0].kg+'</div><div class="kpi-label">Peso inicial</div><div class="kpi-sub">'+weights[0].date+'</div></div>'+
-    '<div class="kpi blue"><div class="kpi-val" style="color:#47c4ff">'+weights[weights.length-1].kg+'</div><div class="kpi-label">Peso actual</div><div class="kpi-sub">'+weights[weights.length-1].date+'</div></div>'+
-    '<div class="kpi '+(parseFloat((weights[weights.length-1].kg-weights[0].kg).toFixed(1))<=0?'green':'red')+'">'+
-    '<div class="kpi-val" style="color:'+(parseFloat((weights[weights.length-1].kg-weights[0].kg).toFixed(1))<=0?'#4ade80':'#f87171')+'">'+
-    (parseFloat((weights[weights.length-1].kg-weights[0].kg).toFixed(1))<=0?'▼ ':'▲ ')+Math.abs(weights[weights.length-1].kg-weights[0].kg).toFixed(1)+'</div>'+
-    '<div class="kpi-label">Variación kg</div></div>'+
-    '<div class="kpi"><div class="kpi-val">'+weights.length+'</div><div class="kpi-label">Registros</div></div>'+
-    '</div>'+
-    '</div>':'')+ 
-
-    // WEIGHT EVOLUTION + NUTRITION AVERAGES
-    // Weight chart SVG for PDF
-    (weights.length>=2?
-    '<div class="section">'+
-    '<h3>⚖️ Evolución de peso</h3>'+
-    '<div style="margin-bottom:8px;display:flex;gap:24px;">'+
-    '<div class="kpi blue" style="flex:1"><div class="kpi-val" style="color:#47c4ff">'+weights[0].kg+'kg</div><div class="kpi-label">Inicio ('+weights[0].date+')</div></div>'+
-    '<div class="kpi blue" style="flex:1"><div class="kpi-val" style="color:#47c4ff">'+weights[weights.length-1].kg+'kg</div><div class="kpi-label">Actual ('+weights[weights.length-1].date+')</div></div>'+
-    '<div class="kpi '+(parseFloat((weights[weights.length-1].kg-weights[0].kg).toFixed(1))<=0?'green':'red')+'" style="flex:1">'+
-    '<div class="kpi-val" style="color:'+(parseFloat((weights[weights.length-1].kg-weights[0].kg).toFixed(1))<=0?'#4ade80':'#f87171')+'">'+(parseFloat((weights[weights.length-1].kg-weights[0].kg).toFixed(1))<=0?'▼ ':'▲ ')+Math.abs(weights[weights.length-1].kg-weights[0].kg).toFixed(1)+'kg</div>'+
-    '<div class="kpi-label">Variación</div></div>'+
-    '</div>'+
-    '<div style="position:relative;width:100%;height:200px;"><canvas id="pdfWeightChart" role="img" aria-label="Peso corporal">'+weights.map(function(w){return w.date+': '+w.kg+'kg';}).join(', ')+'</canvas></div>'+
-    '</div>':'')+ 
-
-
-
-    (avgKcal?
-    '<div class="section">'+
-    '<h3>🥗 Nutrición — Promedios ('+nutriVals.length+' días registrados)</h3>'+
-    (function(){
-      function nutriStatus(val,tgt,unit){
-        var diff=val-tgt;
-        if(Math.abs(diff)/tgt<=0.10)return'<span style="color:#16a34a">✓ justo</span>';
-        if(diff>0)return'<span style="color:#dc2626">+'+(Math.round(diff))+unit+' pasado</span>';
-        return'<span style="color:#2563eb">'+(Math.round(diff))+unit+' faltante</span>';
-      }
-      return '<div class="grid-4">'+
-      '<div class="kpi"><div class="kpi-val">'+avgKcal+'</div><div class="kpi-label">kcal/día promedio</div><div class="kpi-sub">Target: '+target.kcal+' · '+nutriStatus(avgKcal,target.kcal,'kcal')+'</div></div>'+
-      '<div class="kpi green"><div class="kpi-val" style="color:#4ade80">'+avgProt+'g</div><div class="kpi-label">Proteína promedio</div><div class="kpi-sub">Target: '+target.prot+'g · '+nutriStatus(avgProt,target.prot,'g')+'</div></div>'+
-    '<div class="kpi"><div class="kpi-val" style="color:#fbbf24">'+(avgCarb||'—')+'g</div><div class="kpi-label">Carbohidratos promedio</div><div class="kpi-sub">Target descanso: '+target.carb+'g</div></div>'+
-    '<div class="kpi orange"><div class="kpi-val" style="color:#fb923c">'+avgFat+'g</div><div class="kpi-label">Grasa promedio</div><div class="kpi-sub">Target: '+target.fat+'g · '+nutriStatus(avgFat,target.fat,'g')+'</div></div>'+
-    '<div class="kpi blue"><div class="kpi-val" style="color:#47c4ff">'+avgFibra+'g</div><div class="kpi-label">Fibra promedio</div><div class="kpi-sub">Target: 25g · '+nutriStatus(avgFibra,25,'g')+'</div></div>'+
-      '</div>';
-    }())+'</div>':'')+ 
-
+    (weights.length?'<div class="sec"><h3>⚖️ Condición corporal</h3><div class="g4">'+
+    '<div class="k bl"><div class="kv" style="color:#47c4ff">'+weights[0].kg+'</div><div class="kl">Peso inicial</div><div class="ks">'+weights[0].date+'</div></div>'+
+    '<div class="k bl"><div class="kv" style="color:#47c4ff">'+weights[weights.length-1].kg+'</div><div class="kl">Peso actual</div><div class="ks">'+weights[weights.length-1].date+'</div></div>'+
+    '<div class="k '+(weights[weights.length-1].kg<=weights[0].kg?'gr':'re')+'"><div class="kv" style="color:'+(weights[weights.length-1].kg<=weights[0].kg?'#4ade80':'#f87171')+'">'+(weights[weights.length-1].kg<=weights[0].kg?'▼ ':'▲ ')+Math.abs(weights[weights.length-1].kg-weights[0].kg).toFixed(1)+'</div><div class="kl">Variación kg</div></div>'+
+    '<div class="k"><div class="kv">'+weights.length+'</div><div class="kl">Registros</div></div>'+
+    '</div></div>':'')+ 
+    (avgKcal?'<div class="sec"><h3>🥗 Nutrición — Promedios ('+nutriVals.length+' días · hoy excluido)</h3><div class="g5">'+
+    '<div class="k"><div class="kv">'+avgKcal+'</div><div class="kl">kcal/día</div><div class="ks">Target: '+target.kcal+'<br>'+nS(avgKcal,target.kcal,'kcal')+'</div></div>'+
+    '<div class="k gr"><div class="kv" style="color:#4ade80">'+avgProt+'g</div><div class="kl">Proteína</div><div class="ks">Target: '+target.prot+'g<br>'+nS(avgProt,target.prot,'g')+'</div></div>'+
+    '<div class="k"><div class="kv" style="color:#fbbf24">'+(avgCarb||'—')+'g</div><div class="kl">Carb</div><div class="ks">Target: '+target.carb+'g<br>'+nS(avgCarb,target.carb,'g')+'</div></div>'+
+    '<div class="k or"><div class="kv" style="color:#fb923c">'+avgFat+'g</div><div class="kl">Grasa</div><div class="ks">Target: '+target.fat+'g<br>'+nS(avgFat,target.fat,'g')+'</div></div>'+
+    '<div class="k bl"><div class="kv" style="color:#47c4ff">'+avgFibra+'g</div><div class="kl">Fibra</div><div class="ks">Target: 25g<br>'+nS(avgFibra,25,'g')+'</div></div>'+
+    '</div></div>':'')+ 
     '</body></html>';
-
   var win=window.open('','_blank');
   win.document.write(html);
   win.document.close();
-  setTimeout(function(){
-    // Init weight chart in PDF
-    if(weights.length>=2){
-      var wEl=win.document.getElementById('pdfWeightChart');
-      if(wEl&&win.Chart){
-        var wKgs=weights.map(function(w){return w.kg;});
-        var wMin=Math.min.apply(null,wKgs)-1,wMax=Math.max.apply(null,wKgs)+1;
-        new win.Chart(wEl,{type:'line',
-          data:{labels:weights.map(function(w){return w.date.slice(5);}),
-            datasets:[{label:'Peso',data:wKgs,borderColor:'#47c4ff',backgroundColor:'rgba(71,196,255,0.08)',
-              pointBackgroundColor:'#47c4ff',pointRadius:5,tension:0.3,fill:true}]},
-          options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-            scales:{x:{ticks:{font:{size:10}}},y:{min:wMin,max:wMax,ticks:{callback:function(v){return v+'kg';},font:{size:10}}}}}});
-      }
-    }
-
-    setTimeout(function(){win.print();},600);
-  },800);
+  setTimeout(function(){win.print();},500);
 }
 
-function preloadFoodHistory(){
-  const s=getState();
-  // These 3 foods are always kept up to date — overwrites any stale version
-  const preloaded=[
-    {desc:'Café con leche, 2 galletas de arroz con palta y queso',
-     kcal:265,prot:15,carb:26,fat:12,fibra:3},
-    {desc:'3 empanadas Pagnifique (2 carne 1 pollo), barra cereal mix original',
-     kcal:704,prot:31,carb:92,fat:27,fibra:4},
-    {desc:'Snack molino platano',
-     kcal:204,prot:2,carb:42,fat:3,fibra:2},
-  ];
-  if(!s._foodHistory)s._foodHistory=[];
-  preloaded.forEach(food=>{
-    const idx=s._foodHistory.findIndex(f=>f.desc.toLowerCase()===food.desc.toLowerCase());
-    if(idx>=0) s._foodHistory[idx]=food;
-    else s._foodHistory.unshift(food); // add at top
-  });
-  saveState(s);
-}
 
-const GYM_WARMUP=[
-  {name:'Bici estática o caminata rápida',target:'Cardiovascular · calor general',badge:'badge-lower',
-   exec:'5 minutos a ritmo suave. El objetivo es elevar la temperatura corporal y activar la circulación antes de cargar. No hace falta esfuerzo — Z1 suave.',
-   sets:[{l:'Duración',v:'5 min'},{l:'Intensidad',v:'Z1 suave'}],
-   tip:'Si no hay bici, caminata rápida en el lugar o 5 min de trote suave cumple el mismo rol.'},
-  {name:'Sentadillas sin peso',target:'Cuádriceps · Glúteo · movilidad cadera',badge:'badge-lower',
-   exec:'Pies al ancho de caderas, bajás suave hasta paralelo y subís. Sin carga, sin apuro. Activá la cadera y rodilla progresivamente.',
-   sets:[{l:'Reps',v:'15'},{l:'Ritmo',v:'lento y controlado'}],
-   tip:'No es un ejercicio de fuerza — es activación. No te canses.'},
-  {name:'Estocadas sin peso',target:'Glúteo · cadera · equilibrio',badge:'badge-lower',
-   exec:'Paso largo adelante, rodilla baja. Alternás lados. Sin mancuernas — solo movimiento y activación de la cadena posterior.',
-   sets:[{l:'Reps',v:'10 por lado'}],
-   tip:'Prestá atención a la rodilla delantera — que no se vaya hacia adentro.'},
-  {name:'Círculos de cadera',target:'Movilidad cadera · zona lumbar',badge:'badge-core',
-   exec:'De pie, manos en la cintura. Hacés círculos amplios con la cadera en ambas direcciones. Movilizás la articulación antes de cargarla.',
-   sets:[{l:'Reps',v:'10 por lado'}],
-   tip:'Movimiento amplio y lento. Si sentís tensión en la zona lumbar, reducí el rango.'},
-  {name:'Puente de glúteos',target:'Glúteo · activación lumbar',badge:'badge-lower',
-   exec:'Acostado boca arriba, rodillas flexionadas, pies planos. Empujás la cadera hacia arriba contrayendo el glúteo, mantenés 2 segundos arriba y bajás lento.',
-   sets:[{l:'Reps',v:'15'},{l:'Pausa arriba',v:'2"'}],
-   tip:'Activación fundamental antes de sentadilla y peso muerto. Si no activás el glúteo en frío, la espalda compensa.'},
-];
-
-const GYM_STRETCH=[
-  {name:'Cuádriceps de pie',target:'Cuádriceps',badge:'badge-lower',
-   exec:'De pie, sostenés el tobillo con la mano del mismo lado llevando el talón hacia el glúteo. Rodillas juntas, torso erguido. Podés apoyarte en la pared si perdés equilibrio.',
-   sets:[{l:'Duración',v:'30" por lado'},{l:'Repeticiones',v:'2 por lado'}],
-   tip:'No jalés el tobillo hacia adentro — la rodilla debe quedar alineada con la otra. Si sentís dolor en la rodilla, reducí el rango.'},
-  {name:'Isquiotibiales sentado',target:'Isquiotibiales',badge:'badge-lower',
-   exec:'Sentado en el suelo, una pierna extendida y la otra flexionada con la planta del pie contra el muslo interno. Inclinás el torso hacia adelante sobre la pierna extendida manteniendo la espalda recta.',
-   sets:[{l:'Duración',v:'30" por lado'},{l:'Repeticiones',v:'2 por lado'}],
-   tip:'No te fuerces a llegar al pie — lo importante es sentir el estiramiento en la parte posterior del muslo, no doblar la espalda.'},
-  {name:'Glúteo — figura 4',target:'Glúteo · piriforme',badge:'badge-lower',
-   exec:'Acostado boca arriba, cruzás un tobillo sobre la rodilla opuesta formando el número 4. Jalás la pierna de abajo hacia el pecho hasta sentir el estiramiento en el glúteo de la pierna cruzada.',
-   sets:[{l:'Duración',v:'30" por lado'},{l:'Repeticiones',v:'2 por lado'}],
-   tip:'Si tenés molestia en la rodilla cruzada, empujá suavemente la rodilla hacia afuera con la mano.'},
-  {name:'Flexor de cadera — estocada baja',target:'Psoas · flexores de cadera',badge:'badge-lower',
-   exec:'Rodilla trasera apoyada en el suelo, pie delantero adelante. Empujás la cadera hacia adelante y abajo manteniendo el torso erguido. Sentís el estiramiento en la parte delantera de la cadera trasera.',
-   sets:[{l:'Duración',v:'30" por lado'},{l:'Repeticiones',v:'2 por lado'}],
-   tip:'Fundamental después de correr y de sentadillas — el psoas se acorta con ambas actividades.'},
-  {name:'Gemelos — talón contra pared',target:'Gastrocnemio · Sóleo',badge:'badge-lower',
-   exec:'De pie frente a la pared, apoyás las manos. Un pie adelante con la punta contra la pared y el talón en el suelo. Empujás la rodilla hacia la pared. Para el sóleo, flexionás levemente la rodilla trasera.',
-   sets:[{l:'Duración',v:'30" por lado'},{l:'Repeticiones',v:'2 por lado'}],
-   tip:'Dos variantes: pierna recta = gastrocnemio, pierna levemente doblada = sóleo. Hacé ambas — el sóleo es el más olvidado y el más importante para prevenir fascitis.'},
-  {name:'Zona lumbar — rodillas al pecho',target:'Zona lumbar · glúteo',badge:'badge-core',
-   exec:'Acostado boca arriba, jalás ambas rodillas hacia el pecho abrazándolas. Mecés suavemente de lado a lado. Relajás completamente la zona lumbar.',
-   sets:[{l:'Duración',v:'30–45"'}],
-   tip:'Ideal para cerrar cualquier sesión de tren inferior. Si sentís tensión lumbar durante el entreno, hacé este entre ejercicios también.'},
-];
-
-function deleteNutriDay(dateStr){
-  if(!confirm('¿Borrar el registro del '+dateStr+'?'))return;
-  const nd=getNutriData();
-  delete nd[dateStr];
-  saveNutriData(nd);
-  renderNutri();
-}
-
-function deleteFoodFromHistory(desc){
-  const s=getState();
-  if(!s._foodHistory)return;
-  s._foodHistory=s._foodHistory.filter(f=>f.desc!==desc);
-  saveState(s);
-  renderFoodHistoryList();
-  renderNutri();
-}
-
-function renderFoodHistoryList(){
-  const el=document.getElementById('food-history-list');
-  if(!el)return;
-  const foods=getFoodHistory();
-  if(!foods.length){
-    el.innerHTML='<div style="font-family:DM Mono,monospace;font-size:11px;color:var(--muted);text-align:center;padding:10px;">Sin alimentos guardados aún</div>';
-    return;
-  }
-  el.innerHTML=foods.map(f=>`
-    <div class="food-item">
-      <div class="food-item-desc">${f.desc}</div>
-      <div class="food-item-macros">${f.kcal}kcal · P${f.prot||0}g · C${f.carb||0}g · G${f.fat||0}g</div>
-      <button class="food-item-del" onclick="deleteFoodFromHistory('${f.desc.replace(/'/g,"\'")}')">✕</button>
-    </div>`).join('');
-}
-
-function autoSaveDayTotals(){
-  // Save manually entered totals without touching meals
-  const kcal=parseFloat(document.getElementById('ni-kcal').value)||0;
-  const prot=parseFloat(document.getElementById('ni-prot').value)||0;
-  const carb=parseFloat(document.getElementById('ni-carb').value)||0;
-  const fat=parseFloat(document.getElementById('ni-fat').value)||0;
-  const fibra=parseFloat(document.getElementById('ni-fibra').value)||0;
-  if(!kcal)return;
-  const nd=getNutriData();
-  const key=nutriDateKey(nutriCurrentDate);
-  if(!nd[key])nd[key]={meals:[]};
-  nd[key].kcal=kcal;nd[key].prot=prot;nd[key].carb=carb;nd[key].fat=fat;nd[key].fibra=fibra;
-  saveNutriData(nd);
-  updateDaySummaryPreview(kcal,prot,carb,fat,fibra);
-}
-
-function getPlannedDate(wn,d){
-  const days=weekDays(wn-1);
-  return nutriDateKey(days[d]);
-}
-
-function formatDateShort(dateStr){
-  if(!dateStr)return'';
-  const [y,m,d]=dateStr.split('-');
-  const mo=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  return d+' '+mo[parseInt(m)-1];
-}
-
-function saveSessionDate(key,dateStr){
-  const s=getState();
-  if(!s[key])return;
-  s[key].realDate=dateStr;
-  saveState(s);
-  // Update info label
-  const so=getSessObj(key);
-  const wn=parseInt(key.match(/w(\d+)/)[1]);
-  const d=parseInt(key.match(/d(\d+)/)[1]);
-  const planned=getPlannedDate(wn,d);
-  const infoEl=document.getElementById('sdateinfo-'+key);
-  if(infoEl){
-    if(dateStr&&dateStr!==planned){
-      infoEl.textContent='↪ movida al '+formatDateShort(dateStr);
-      infoEl.classList.add('visible');
-    } else {
-      infoEl.classList.remove('visible');
-    }
-  }
-  updateStats();
-  renderStats();
-}
-
-// ===== GYM WEIGHT LOG =====
-function getWeightLogs(){
-  const s=getState();
-  return s._gymWeights||{};
-}
-function saveWeightLogs(logs){
-  const s=getState();
-  s._gymWeights=logs;
-  saveState(s);
-}
-function getLastWeightLog(exKey){
-  const logs=getWeightLogs();
-  const entries=(logs[exKey]||[]).filter(function(e){return e.kg&&!isNaN(e.kg);});
-  return entries.length?entries[entries.length-1]:null;
-}
-
-function saveWeightLog(exKey){
-  const kgEl=document.getElementById('wl-kg-'+exKey);
-  const repsEl=document.getElementById('wl-reps2-'+exKey);
-  const kg=parseFloat(kgEl?.value)||0;
-  const reps=repsEl?.value||'';
-  if(!kg&&!reps)return;
-  const logs=getWeightLogs();
-  const today=new Date();
-  const dateStr=today.getDate()+'/'+(today.getMonth()+1)+'/'+today.getFullYear();
-  const entry={date:dateStr,ts:Date.now()};
-  if(kg>0)entry.kg=kg;
-  if(reps)entry.reps=reps;
-  if(!entry.kg)entry.kg=0;
-
-  // Save to current key
-  if(!logs[exKey])logs[exKey]=[];
-  logs[exKey].push(entry);
-
-  // Sync to same exercise in other routines
-  const allGymData=[
-    {id:'gym-day1',data:GYM_DAY1},
-    {id:'gym-day2',data:GYM_DAY2},
-    {id:'gym-full',data:GYM_FULL}
-  ];
-  // Find exercise name from current key
-  let foundName='';
-  allGymData.forEach(function(gym){
-    gym.data.forEach(function(ex){
-      const k=gym.id+'_'+ex.name.replace(/[^a-zA-Z0-9]/g,'_');
-      if(k===exKey) foundName=ex.name;
-    });
-  });
-  // Sync to all other routines with same name
-  if(foundName){
-    allGymData.forEach(function(gym){
-      gym.data.forEach(function(ex){
-        if(ex.name!==foundName)return;
-        const syncKey=gym.id+'_'+ex.name.replace(/[^a-zA-Z0-9]/g,'_');
-        if(syncKey===exKey)return;
-        if(!logs[syncKey])logs[syncKey]=[];
-        if(!logs[syncKey].some(function(e){return e.ts===entry.ts;})){
-          logs[syncKey].push(entry);
-        }
-      });
-    });
-  }
-
-  saveWeightLogs(logs);
-  if(kgEl)kgEl.value='';
-  if(repsEl)repsEl.value='';
-  renderWeightLogHistory(exKey);
-}
-
-function handleDelWeight(btn){
-  const exKey=btn.getAttribute('data-exkey');
-  const idx=parseInt(btn.getAttribute('data-idx'));
-  deleteWeightLog(exKey,idx);
-}
-
-function deleteWeightLog(exKey,idx){
-  const logs=getWeightLogs();
-  if(!logs[exKey])return;
-  if(idx<0||idx>=logs[exKey].length)return;
-  logs[exKey].splice(idx,1);
-  saveWeightLogs(logs);
-  renderWeightLogHistory(exKey);
-}
-
-function renderWeightLogHistory(exKey){
-  const histEl=document.getElementById('wl-hist-'+exKey);
-  if(!histEl)return;
-  const logs=getWeightLogs();
-
-  // Clean corrupt entries
-  let entries=(logs[exKey]||[]).filter(function(e){
-    return e&&typeof e.kg==='number'&&!isNaN(e.kg)&&e.kg>=0&&e.date;
-  });
-  if(entries.length!==(logs[exKey]||[]).length){
-    logs[exKey]=entries;
-    saveWeightLogs(logs);
-  }
-  if(!entries.length){histEl.innerHTML='';return;}
-
-  const maxKg=Math.max.apply(null,entries.map(function(e){return e.kg;}));
-  const firstKg=entries[0].kg||0;
-  // Detect type from first entry
-  const firstEntry=entries[0]||{};
-  // Detect type: if kg===0 and reps is non-numeric → time; if kg===0 → reps only; else kg+reps
-  const isTimeBased=entries.some(function(e){return (!e.kg||e.kg===0)&&e.reps&&isNaN(parseFloat(e.reps));});
-  const isRepsOnly=!isTimeBased&&entries.every(function(e){return !e.kg||e.kg===0;});
-  const isRepsOnlyHist=entries.every(function(e){return (!e.kg||e.kg===0)&&e.reps;});
-
-  histEl.innerHTML=
-    '<div style="display:grid;grid-template-columns:80px 1fr 60px 32px;gap:4px;margin-bottom:4px;">'+
-    '<div class="wl-history-hdr">Fecha</div>'+
-    '<div class="wl-history-hdr">'+(isTimeBased?'Tiempo':isRepsOnlyHist?'Reps':'Kg · Reps')+'</div>'+
-    '<div class="wl-history-hdr">Evol.</div>'+
-    '<div></div>'+
-    '</div>'+
-    entries.slice().reverse().map(function(e,ri){
-      const realIdx=entries.length-1-ri;
-      const isBest=e.kg>0&&e.kg===maxKg;
-      const mainVal=isTimeBased
-        ?(e.reps||'—')
-        :isRepsOnlyHist
-        ?(e.reps?e.reps+' reps':'—')
-        :(e.kg>0?e.kg+' kg'+(e.reps&&e.reps!=='undefined'&&e.reps!=='null'?' × '+e.reps+' rep':''):'—');
-      const firstVal=isRepsOnly?(parseFloat(entries[0].reps)||0):firstKg;
-      const curVal=isRepsOnly?(parseFloat(e.reps)||0):(e.kg||0);
-      const diffPct=firstVal>0&&curVal>0?Math.round((curVal-firstVal)/firstVal*100):0;
-      const pctStr=(isTimeBased)||firstVal===0?'—':(diffPct===0?'—':(diffPct>0?'+':'')+diffPct+'%');
-      const pctColor=diffPct>0?'var(--ok)':diffPct<0?'var(--fail)':'var(--muted)';
-      return '<div style="display:grid;grid-template-columns:80px 1fr 60px 32px;gap:4px;padding:5px 0;border-bottom:1px solid rgba(42,42,58,.5);">'+
-        '<div class="wl-history-cell" style="font-size:10px;">'+e.date+'</div>'+
-        '<div class="wl-history-cell '+(isBest?'best':'')+'">'+mainVal+(isBest?' 🏆':'')+'</div>'+
-        '<div class="wl-history-cell" style="font-size:10px;color:'+pctColor+';">'+pctStr+'</div>'+
-        '<button class="wl-del-btn" data-exkey="'+exKey.replace(/"/g,'&quot;')+'" data-idx="'+realIdx+'" onclick="handleDelWeight(this)">✕</button>'+
-        '</div>';
-    }).join('');
-
-  // Chart
-  const chartWrap=document.getElementById('wl-chart-wrap-'+exKey);
-  const chartEl=document.getElementById('wl-chart-'+exKey);
-  if(chartWrap&&chartEl&&entries.length>=2&&typeof Chart!=='undefined'){
-    chartWrap.style.display='block';
-    const existing=Chart.getChart(chartEl);
-    if(existing)existing.destroy();
-    const isDark=matchMedia('(prefers-color-scheme: dark)').matches;
-    const gridColor=isDark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)';
-    const textColor=isDark?'#aaa':'#888';
-    new Chart(chartEl,{
-      type:'line',
-      data:{
-        labels:entries.map(function(e){return e.date;}),
-        datasets:[{
-          label:'Kg',
-          data:entries.map(function(e){return e.kg;}),
-          borderColor:'#a78bfa',
-          backgroundColor:'rgba(167,139,250,0.08)',
-          pointBackgroundColor:'#a78bfa',
-          pointRadius:4,
-          tension:0.3,
-          fill:true,
-        }]
-      },
-      options:{
-        responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{display:false}},
-        scales:{
-          x:{grid:{color:gridColor},ticks:{color:textColor,font:{size:9}}},
-          y:{grid:{color:gridColor},ticks:{color:textColor,font:{size:9},callback:function(v){return v+'kg';}}}
-        }
-      }
-    });
-  }
-}
-
-function cleanAllWeightLogs(){
-  const s=getState();
-  const logs=s._gymWeights||{};
-  let changed=false;
-  Object.keys(logs).forEach(function(key){
-    const clean=logs[key].filter(function(e){
-      return e&&typeof e.kg==='number'&&!isNaN(e.kg)&&e.date;
-    });
-    if(clean.length!==logs[key].length){logs[key]=clean;changed=true;}
-  });
-  if(changed){s._gymWeights=logs;saveState(s);}
-}
-
-// ===== OPEN FOOD FACTS =====
-let _offSelected=null;
-
-async function searchFood(){
-  const query=document.getElementById('off-search-input').value.trim();
-  if(!query)return;
-  const loading=document.getElementById('off-loading');
-  const results=document.getElementById('off-results');
-  const addArea=document.getElementById('off-add-area');
-  loading.style.display='block';
-  results.innerHTML='';
-  addArea.style.display='none';
-  _offSelected=null;
-
-  try{
-    const url='https://world.openfoodfacts.org/cgi/search.pl?search_terms='+
-      encodeURIComponent(query)+'&search_simple=1&action=process&json=1&page_size=6&fields=product_name,nutriments,serving_size,brands';
-    const res=await fetch(url);
-    const data=await res.json();
-    loading.style.display='none';
-
-    const products=(data.products||[]).filter(function(p){
-      return p.product_name&&p.nutriments&&p.nutriments['energy-kcal_100g']!=null;
-    });
-
-    if(!products.length){
-      results.innerHTML='<div style="font-family:DM Mono,monospace;font-size:11px;color:var(--muted);text-align:center;padding:12px;">Sin resultados. Probá con otro término.</div>';
-      return;
-    }
-
-    results.innerHTML=products.map(function(p,i){
-      const n=p.nutriments;
-      const kcal=Math.round(n['energy-kcal_100g']||0);
-      const prot=Math.round(n['proteins_100g']||0);
-      const carb=Math.round(n['carbohydrates_100g']||0);
-      const fat=Math.round(n['fat_100g']||0);
-      const fibra=Math.round(n['fiber_100g']||0);
-      const brand=p.brands?(' · '+p.brands.split(',')[0]):'';
-      return '<div onclick="selectOFFProduct('+i+')" data-idx="'+i+'" '+
-        'style="padding:10px 12px;margin-bottom:6px;background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:6px;cursor:pointer;transition:border-color .15s;" '+
-        '>'+
-        '<div style="font-size:12px;font-weight:600;margin-bottom:4px;">'+p.product_name+brand+'</div>'+
-        '<div style="display:flex;gap:10px;font-family:DM Mono,monospace;font-size:10px;color:var(--muted);">'+
-          '<span style="color:var(--accent);">'+kcal+' kcal</span>'+
-          '<span>P '+prot+'g</span>'+
-          '<span>C '+carb+'g</span>'+
-          '<span>G '+fat+'g</span>'+
-          (fibra?'<span>F '+fibra+'g</span>':'')+
-          '<span style="color:var(--muted);font-size:9px;">por 100g</span>'+
-        '</div>'+
-      '</div>';
-    }).join('');
-
-    // Store products for selection
-    window._offProducts=products;
-
-  }catch(err){
-    loading.style.display='none';
-    results.innerHTML='<div style="font-family:DM Mono,monospace;font-size:11px;color:var(--fail);text-align:center;padding:12px;">Error de conexión. Verificá internet.</div>';
-  }
-}
-
-function selectOFFProduct(idx){
-  const p=window._offProducts[idx];
-  if(!p)return;
-  _offSelected=p;
-
-  // Highlight selected
-  document.querySelectorAll('#off-results > div').forEach(function(el,i){
-    el.style.borderColor=i===idx?'var(--accent)':'var(--border)';
-    el.style.background=i===idx?'rgba(232,255,71,.04)':'rgba(255,255,255,.02)';
-  });
-
-  document.getElementById('off-selected-name').textContent=p.product_name;
-  document.getElementById('off-add-area').style.display='block';
-  updateOFFPreview();
-  document.getElementById('off-add-area').scrollIntoView({behavior:'smooth'});
-}
-
-function updateOFFPreview(){
-  if(!_offSelected)return;
-  const portion=parseFloat(document.getElementById('off-portion').value)||100;
-  const n=_offSelected.nutriments;
-  const factor=portion/100;
-  const kcal=Math.round((n['energy-kcal_100g']||0)*factor);
-  const prot=Math.round((n['proteins_100g']||0)*factor);
-  const carb=Math.round((n['carbohydrates_100g']||0)*factor);
-  const fat=Math.round((n['fat_100g']||0)*factor);
-  const fibra=Math.round((n['fiber_100g']||0)*factor);
-
-  const items=[
-    ['kcal',kcal,'var(--accent)'],
-    ['Prot',prot+'g','#4ade80'],
-    ['Carb',carb+'g','#fbbf24'],
-    ['Grasa',fat+'g','#fb923c'],
-    ['Fibra',fibra+'g','var(--accent2)']
-  ];
-  document.getElementById('off-preview').innerHTML=items.map(function(item){
-    return '<div style="background:rgba(255,255,255,.04);border-radius:4px;padding:6px;text-align:center;">'+
-      '<div style="font-family:Bebas Neue,sans-serif;font-size:18px;color:'+item[2]+';line-height:1;">'+item[1]+'</div>'+
-      '<div style="font-family:DM Mono,monospace;font-size:8px;color:var(--muted);margin-top:2px;">'+item[0]+'</div>'+
-      '</div>';
-  }).join('');
-}
-
-function addOFFFood(){
-  if(!_offSelected)return;
-  const portion=parseFloat(document.getElementById('off-portion').value)||100;
-  const mealName=document.getElementById('off-meal-name').value;
-  const n=_offSelected.nutriments;
-  const factor=portion/100;
-  const food={
-    desc:_offSelected.product_name+(portion!==100?' ('+portion+'g)':''),
-    kcal:Math.round((n['energy-kcal_100g']||0)*factor),
-    prot:Math.round((n['proteins_100g']||0)*factor),
-    carb:Math.round((n['carbohydrates_100g']||0)*factor),
-    fat:Math.round((n['fat_100g']||0)*factor),
-    fibra:Math.round((n['fiber_100g']||0)*factor),
-  };
-  // Open meals section and add row
-  document.getElementById('meals-section').classList.add('open');
-  addMealRow({name:mealName,...food});
-  saveFoodToHistory(food);
-  recalcMealTotals();
-  // Reset
-  document.getElementById('off-results').innerHTML='';
-  document.getElementById('off-add-area').style.display='none';
-  document.getElementById('off-search-input').value='';
-  _offSelected=null;
-  window._offProducts=[];
-  // Scroll to meals
-  setTimeout(function(){document.getElementById('meals-section').scrollIntoView({behavior:'smooth'});},200);
-}
-
-// ===== EXTRA TRAINING =====
-let _extraType='run';
-let _extraRPE=0;
-
-function openExtraTraining(){
-  const modal=document.getElementById('extra-modal');
-  modal.style.display='flex';
-  // Set today's date
-  const today=new Date();
-  const pad=n=>String(n).padStart(2,'0');
-  document.getElementById('et-date').value=today.getFullYear()+'-'+pad(today.getMonth()+1)+'-'+pad(today.getDate());
-  _extraType='run';
-  _extraRPE=0;
-  setExtraType('run');
-}
-
-function closeExtraModal(){
-  document.getElementById('extra-modal').style.display='none';
-}
-
-function setExtraType(type){
-  _extraType=type;
-  ['run','bike','gym'].forEach(function(t){
-    const btn=document.getElementById('et-'+t);
-    if(!btn)return;
-    const isActive=t===type;
-    btn.style.background=isActive?'rgba(232,255,71,.15)':'rgba(255,255,255,.04)';
-    btn.style.borderColor=isActive?'rgba(232,255,71,.5)':'var(--border)';
-    btn.style.color=isActive?'var(--accent)':'var(--muted)';
-  });
-  // Show/hide km field
-  const kmField=document.getElementById('et-km-field');
-  if(kmField)kmField.style.display=type==='gym'?'none':'block';
-}
-
-function setExtraRPE(val){
-  _extraRPE=val;
-  const rpeColors=['','#4ade80','#86efac','#86efac','#fbbf24','#fbbf24','#fb923c','#f87171','#ef4444','#dc2626','#991b1b'];
-  for(var i=1;i<=10;i++){
-    const btn=document.getElementById('et-rpe-'+i);
-    if(!btn)continue;
-    btn.style.background=i===val?rpeColors[i]:'none';
-    btn.style.color=i===val?'#000':'var(--muted)';
-    btn.style.borderColor=i===val?rpeColors[i]:'var(--border)';
-  }
-}
-
-function saveExtraTraining(){
-  const date=document.getElementById('et-date').value;
-  const desc=document.getElementById('et-desc').value||(_extraType==='run'?'Salida extra':_extraType==='bike'?'Bici extra':'Gym extra');
-  const km=parseFloat(document.getElementById('et-km').value)||0;
-  const time=document.getElementById('et-time').value||'';
-  if(!date){alert('Seleccioná una fecha');return;}
-
-  const icons={run:'🏃',bike:'🚴',gym:'💪'};
-  const s=getState();
-  if(!s._extras)s._extras=[];
-  const entry={
-    id:Date.now(),
-    date,type:_extraType,
-    icon:icons[_extraType],
-    desc,km,time,rpe:_extraRPE,
-  };
-  // Calc pace if run
-  if(_extraType==='run'&&km>0&&time){
-    const parts=time.split(':');
-    let secs=parts.length===2?parseInt(parts[0])*60+parseInt(parts[1]):parseInt(parts[0])*3600+parseInt(parts[1])*60+parseInt(parts[2]||0);
-    if(secs>0){const spk=secs/km;entry.pace=Math.floor(spk/60)+':'+String(Math.round(spk%60)).padStart(2,'0')+' /km';}
-  }
-  s._extras.push(entry);
-  saveState(s);
-  closeExtraModal();
-  renderExtras();
-  updateStats();
-  renderStats();
-  // Clear form
-  document.getElementById('et-desc').value='';
-  document.getElementById('et-km').value='';
-  document.getElementById('et-time').value='';
-}
-
-function renderExtras(){
-  const s=getState();
-  const extras=s._extras||[];
-  const el=document.getElementById('extras-list');
-  if(!el)return;
-  if(!extras.length){el.innerHTML='';return;}
-  el.innerHTML='<div style="margin-bottom:12px;">'+
-    extras.slice().reverse().map(function(e){
-      const d=new Date(e.date+'T00:00:00');
-      const mo=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-      const dateLabel=d.getDate()+' '+mo[d.getMonth()];
-      return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">'+
-        '<span style="font-size:18px;">'+e.icon+'</span>'+
-        '<div style="flex:1;">'+
-          '<div style="font-size:12px;font-weight:600;">'+e.desc+'</div>'+
-          '<div style="font-family:DM Mono,monospace;font-size:10px;color:var(--muted);">'+dateLabel+
-            (e.km?' · '+e.km+' km':'')+
-            (e.time?' · '+e.time:'')+
-            (e.pace?' · '+e.pace:'')+
-            (e.rpe?' · RPE '+e.rpe:'')+
-          '</div>'+
-        '</div>'+
-        '<button onclick="deleteExtra('+e.id+')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;">✕</button>'+
-      '</div>';
-    }).join('')+
-  '</div>';
-}
-
-function deleteExtra(id){
-  const s=getState();
-  s._extras=(s._extras||[]).filter(function(e){return e.id!==id;});
-  saveState(s);
-  renderExtras();
-  updateStats();
-}
-
-// ===== PACE CHARTS (3 separate) =====
 function renderPaceCharts(runs){
   var pc=document.getElementById('pace-chart');
   if(!pc)return;
-
   var longRuns=[],shortRuns=[],intervalRuns=[];
   runs.filter(function(r){return r.pace&&r.pace!=='—';}).forEach(function(r){
     var paceClean=r.pace.replace(/\s*\/km/,'').trim();
@@ -3413,155 +2614,88 @@ function renderPaceCharts(runs){
     var paceMin=parseFloat(parts[0])+(parseFloat(parts[1]||0)/60);
     if(!paceMin||isNaN(paceMin)||paceMin<3||paceMin>12)return;
     var d=r.desc||'';
-    var entry={desc:d,paceMin:paceMin,dateLabel:r.dateLabel||''};
-    if(d.includes('largo')||d.includes('MÁXIMO')||d.includes('moderado'))
-      longRuns.push(entry);
-    else if(d.includes('Pasadas')||d.includes('pasadas')||d.includes('Tempo')||d.includes('tempo'))
-      intervalRuns.push(entry);
-    else
-      shortRuns.push(entry);
+    var e={desc:d,paceMin:paceMin,dateLabel:r.dateLabel||''};
+    if(d.includes('largo')||d.includes('MÁXIMO')||d.includes('moderado'))longRuns.push(e);
+    else if(d.includes('Pasadas')||d.includes('pasadas')||d.includes('Tempo')||d.includes('tempo'))intervalRuns.push(e);
+    else shortRuns.push(e);
   });
-
-  function fmtPace(v){var m=Math.floor(v);var s=Math.round((v-m)*60);return m+':'+(s<10?'0':'')+s;}
-
-  function makeSVG(runs2, color, showProj){
-    if(!runs2.length) return '';
-    var W=300,H=80,padL=32,padB=20,padT=10,padR=10;
-    var paceVals=runs2.map(function(r){return r.paceMin;});
-    var labels=runs2.map(function(r){return r.dateLabel;});
-
-    // Projection
-    var projPace=null, projPaceCorr=null;
+  function fmtP(v){var m=Math.floor(v);var s=Math.round((v-m)*60);return m+':'+(s<10?'0':'')+s;}
+  function makeSVG(runs2,color,showProj){
+    if(!runs2.length)return'';
+    var W=300,H=80,pL=32,pB=20,pT=10,pR=10;
+    var pVals=runs2.map(function(r){return r.paceMin;});
+    var lbls=runs2.map(function(r){return r.dateLabel;});
+    var projPace=null,projCorr=null;
     if(showProj&&runs2.length>=2){
-      var n=runs2.length;
-      var sumX=0,sumY=0,sumXY=0,sumX2=0;
-      for(var i=0;i<n;i++){sumX+=i;sumY+=paceVals[i];sumXY+=i*paceVals[i];sumX2+=i*i;}
-      var denom=n*sumX2-sumX*sumX;
-      var slope=denom!==0?(n*sumXY-sumX*sumY)/denom:0;
-      var intercept=(sumY-slope*sumX)/n;
-      var cappedSlope=Math.max(-5/60,Math.min(0,slope));
-      var today=new Date();
-      var RACE=new Date('2026-09-06');
-      var weeksLeft=Math.max(0,Math.round((RACE-today)/(7*24*3600*1000)));
-      var remSess=Math.max(1,Math.round(weeksLeft/2));
-      projPace=Math.min(paceVals[n-1],Math.max(4.0,intercept+cappedSlope*(n-1+remSess)));
-      projPaceCorr=projPace*0.92;
-      // Add projection points
-      var projVals=paceVals.map(function(){return null;});
-      projVals[n-1]=paceVals[n-1];
-      for(var j=1;j<=Math.min(3,remSess);j++){
-        paceVals.push(null);
-        projVals.push(Math.min(paceVals[n-1],Math.max(4.0,intercept+cappedSlope*(n-1+j))));
-        labels.push('→');
-      }
+      var n=runs2.length,sX=0,sY=0,sXY=0,sX2=0;
+      for(var i=0;i<n;i++){sX+=i;sY+=pVals[i];sXY+=i*pVals[i];sX2+=i*i;}
+      var den=n*sX2-sX*sX;
+      var sl=den!==0?(n*sXY-sX*sY)/den:0;
+      var ic=(sY-sl*sX)/n;
+      var csl=Math.max(-5/60,Math.min(0,sl));
+      var today=new Date(),RACE=new Date('2026-09-06');
+      var wL=Math.max(0,Math.round((RACE-today)/(7*24*3600*1000)));
+      var rS=Math.max(1,Math.round(wL/2));
+      projPace=Math.min(pVals[n-1],Math.max(4.0,ic+csl*(n-1+rS)));
+      projCorr=projPace*0.92;
     }
-
-    var allVals=paceVals.concat(projPace?[projPace]:[]).filter(function(v){return v!==null;});
-    var minP=Math.min.apply(null,allVals)-0.3;
-    var maxP=Math.max.apply(null,allVals)+0.3;
-    var totalW=W-padL-padR;
-    var totalH=H-padT-padB;
-    var n2=paceVals.length;
-
-    function xPos(i){return padL+i/(n2>1?n2-1:1)*totalW;}
-    function yPos(v){return padT+totalH-(v-minP)/(maxP-minP)*totalH;}
-
-    // Build SVG
+    var allV=pVals.filter(function(v){return v!==null;});
+    if(projPace)allV.push(projPace);
+    var minP=Math.min.apply(null,allV)-0.3,maxP=Math.max.apply(null,allV)+0.3;
+    var tW=W-pL-pR,tH=H-pT-pB,n2=pVals.length;
+    function xP(i){return pL+i/(n2>1?n2-1:1)*tW;}
+    function yP(v){return pT+tH-(v-minP)/(maxP-minP)*tH;}
     var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;display:block;" xmlns="http://www.w3.org/2000/svg">';
-
-    // Grid lines
-    svg+='<line x1="'+padL+'" y1="'+padT+'" x2="'+padL+'" y2="'+(H-padB)+'" stroke="rgba(255,255,255,.08)" stroke-width="1"/>';
-    svg+='<line x1="'+padL+'" y1="'+(H-padB)+'" x2="'+(W-padR)+'" y2="'+(H-padB)+'" stroke="rgba(255,255,255,.08)" stroke-width="1"/>';
-
-    // Y axis labels
-    var yMid=(minP+maxP)/2;
-    [minP,yMid,maxP].forEach(function(v){
-      var y=yPos(v);
-      svg+='<text x="'+(padL-3)+'" y="'+(y+3)+'" text-anchor="end" font-family="DM Mono,monospace" font-size="7" fill="rgba(255,255,255,.4)">'+fmtPace(v)+'</text>';
-    });
-
-    // Projection line
-    if(projPace!==null){
-      var projPoints=[];
-      paceVals.forEach(function(v,i){
-        if(v===null) projPoints.push(null);
-      });
-      // Connect from last real point to projection
-      var lastRealIdx=paceVals.filter(function(v){return v!==null;}).length-1;
-      // Draw dashed projection
-      var projSvgPts='';
-      var prevX=null,prevY=null;
-      paceVals.forEach(function(v,i){
-        if(v!==null){prevX=xPos(i);prevY=yPos(v);}
-      });
-      if(projPace&&prevX!==null){
-        var projX=xPos(n2-1);
-        svg+='<line x1="'+prevX+'" y1="'+prevY+'" x2="'+projX+'" y2="'+yPos(projPace)+'" stroke="rgba(232,255,71,.4)" stroke-width="1.5" stroke-dasharray="4,3"/>';
-      }
-    }
-
-    // Main line
+    svg+='<line x1="'+pL+'" y1="'+pT+'" x2="'+pL+'" y2="'+(H-pB)+'" stroke="rgba(255,255,255,.08)" stroke-width="1"/>';
+    svg+='<line x1="'+pL+'" y1="'+(H-pB)+'" x2="'+(W-pR)+'" y2="'+(H-pB)+'" stroke="rgba(255,255,255,.08)" stroke-width="1"/>';
+    [minP,(minP+maxP)/2,maxP].forEach(function(v){svg+='<text x="'+(pL-3)+'" y="'+(yP(v)+3)+'" text-anchor="end" font-family="DM Mono,monospace" font-size="7" fill="rgba(255,255,255,.4)">'+fmtP(v)+'</text>';});
+    if(projPace!==null){var lx=xP(n2-1),ly=yP(pVals[n2-1]);svg+='<line x1="'+lx+'" y1="'+ly+'" x2="'+xP(n2-1)+'" y2="'+yP(projPace)+'" stroke="rgba(232,255,71,.4)" stroke-width="1.5" stroke-dasharray="4,3"/>';}
     var pts=[];
-    paceVals.forEach(function(v,i){if(v!==null)pts.push(xPos(i)+','+yPos(v));});
-    if(pts.length>1)
-      svg+='<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+color+'" stroke-width="2" stroke-linejoin="round"/>';
-
-    // Dots + labels
-    paceVals.forEach(function(v,i){
+    pVals.forEach(function(v,i){if(v!==null)pts.push(xP(i)+','+yP(v));});
+    if(pts.length>1)svg+='<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+color+'" stroke-width="2" stroke-linejoin="round"/>';
+    pVals.forEach(function(v,i){
       if(v===null)return;
-      var x=xPos(i),y=yPos(v);
+      var x=xP(i),y=yP(v);
       svg+='<circle cx="'+x+'" cy="'+y+'" r="4" fill="'+color+'"/>';
-      svg+='<text x="'+x+'" y="'+(y-7)+'" text-anchor="middle" font-family="DM Mono,monospace" font-size="7" fill="'+color+'">'+fmtPace(v)+'</text>';
-      if(labels[i]&&labels[i]!=='→')
-        svg+='<text x="'+x+'" y="'+(H-6)+'" text-anchor="middle" font-family="DM Mono,monospace" font-size="7" fill="rgba(255,255,255,.4)">'+labels[i]+'</text>';
+      svg+='<text x="'+x+'" y="'+(y-7)+'" text-anchor="middle" font-family="DM Mono,monospace" font-size="7" fill="'+color+'">'+fmtP(v)+'</text>';
+      if(lbls[i]&&lbls[i]!=='→')svg+='<text x="'+x+'" y="'+(H-6)+'" text-anchor="middle" font-family="DM Mono,monospace" font-size="7" fill="rgba(255,255,255,.4)">'+lbls[i]+'</text>';
     });
-
     svg+='</svg>';
-
-    // Projection text
     var projText='';
-    if(projPace&&projPaceCorr){
-      var raceTime=projPaceCorr*21.097;
-      var rH=Math.floor(raceTime/60),rM=Math.round(raceTime%60);
-      projText='<div style="font-family:DM Mono,monospace;font-size:10px;color:var(--muted);margin-top:6px;padding-top:6px;border-top:1px solid var(--border);">'+
-        '📈 Proyección fondo: <strong style="color:var(--accent)">'+fmtPace(projPace)+'/km</strong> · '+
-        '🏁 Carrera (−8%): <strong style="color:var(--accent2)">'+fmtPace(projPaceCorr)+'/km</strong> · '+
-        '<strong style="color:var(--ok)">'+rH+'h '+String(rM).padStart(2,'0')+'min</strong>'+
-        '</div>';
+    if(projPace&&projCorr){
+      var rt=projCorr*21.097,rH=Math.floor(rt/60),rM=Math.round(rt%60);
+      projText='<div style="font-family:DM Mono,monospace;font-size:10px;color:var(--muted);margin-top:6px;padding-top:6px;border-top:1px solid var(--border);">📈 Proyección fondo: <strong style="color:var(--accent)">'+fmtP(projPace)+'/km</strong> · 🏁 Carrera (−8%): <strong style="color:var(--accent2)">'+fmtP(projCorr)+'/km</strong> · <strong style="color:var(--ok)">'+rH+'h '+String(rM).padStart(2,'0')+'min</strong></div>';
     }
     return svg+projText;
   }
-
-  function block(label, color, runs2, showProj){
-    if(!runs2.length)
-      return '<div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:8px;font-family:DM Mono,monospace;font-size:11px;color:var(--muted);">'+label+' — sin datos aún</div>';
-    return '<div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:12px;">'+
+  function block(label,color,runs2,showProj){
+    if(!runs2.length)return'<div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:8px;font-family:DM Mono,monospace;font-size:11px;color:var(--muted);">'+label+' — sin datos aún</div>';
+    return'<div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:12px;">'+
       '<div style="font-family:DM Mono,monospace;font-size:10px;letter-spacing:2px;color:'+color+';text-transform:uppercase;margin-bottom:8px;">'+label+' ('+runs2.length+' sesiones)</div>'+
-      makeSVG(runs2,color,showProj)+
-      '</div>';
+      makeSVG(runs2,color,showProj)+'</div>';
   }
-
-  pc.innerHTML=
-    block('Fondo largo','var(--accent)',longRuns,true)+
-    block('Fondo corto','var(--accent2)',shortRuns,false)+
-    block('Pasadas / tempo','#fb923c',intervalRuns,false);
+  pc.innerHTML=block('Fondo largo','var(--accent)',longRuns,true)+block('Fondo corto','var(--accent2)',shortRuns,false)+block('Pasadas / tempo','#fb923c',intervalRuns,false);
 }
 
 
-// ===== INIT =====
+// ===== GYM DATA (needed for renderGym) =====
+// Already defined above as GYM_DAY1, GYM_DAY2, GYM_FULL
+
+// ===== EMBEDDED BACKUP =====
 var EMBEDDED_BACKUP = {"_foodHistory": [{"desc": "Café con leche, galletas de arroz con maní y queso, kaki, banana", "kcal": 475, "prot": 25, "carb": 65.7, "fat": 13.6, "fibra": 6.1}, {"desc": "Pan con palta, huevo, chauchas", "kcal": 460, "prot": 15, "carb": 53, "fat": 23, "fibra": 9.5}, {"desc": "Yogurisimo con 3 de prote, 3 de avena, 1 pan con palta ", "kcal": 679, "prot": 45, "carb": 82.6, "fat": 20.7, "fibra": 9.5}, {"desc": "4 cucharadas de avena, 1 banana, 1 manzana", "kcal": 430, "prot": 9.8, "carb": 92, "fat": 4, "fibra": 13}, {"desc": "Chipa, kaki, mate", "kcal": 348, "prot": 8, "carb": 51, "fat": 12, "fibra": 2}, {"desc": "Suprema a la plancha, con arroz y ensalada", "kcal": 654, "prot": 97, "carb": 35, "fat": 10, "fibra": 2.5}, {"desc": "Yogurisimo, 2 de prote, pan con palta y kaki", "kcal": 593, "prot": 33, "carb": 79, "fat": 18.6, "fibra": 7.8}, {"desc": "Yogurisimo con 3 de avena y 3 de prote ", "kcal": 474, "prot": 41, "carb": 56.6, "fat": 9.2, "fibra": 4.5}, {"desc": "1.5 Huevo duro", "kcal": 105, "prot": 9, "carb": 0.7, "fat": 7, "fibra": 0}, {"desc": "Leche y scones", "kcal": 330, "prot": 24, "carb": 52, "fat": 2, "fibra": 1}, {"desc": "Chivito de pollo", "kcal": 484, "prot": 46.5, "carb": 37, "fat": 15.8, "fibra": 7.1}, {"desc": "Yogur colonial con 3 de prote, 4 de avena y 1 banana", "kcal": 596, "prot": 44, "carb": 97, "fat": 4, "fibra": 9}, {"desc": "Milanesas de pesadilla, quinoa, ensalada de repollo y zanahoria ", "kcal": 623, "prot": 43, "carb": 67, "fat": 17.6, "fibra": 8.1}, {"desc": "Media banana", "kcal": 54, "prot": 0.7, "carb": 14, "fat": 0, "fibra": 1.5}, {"desc": "Yogur proteico 190ml", "kcal": 135, "prot": 15, "carb": 14, "fat": 1.9, "fibra": 0}, {"desc": "Café con leche, galletas de arroz, omelet 4 huevos, manzana", "kcal": 503, "prot": 33, "carb": 49, "fat": 20, "fibra": 4}, {"desc": "Yogur griego con 3 de prote y 3 de avena", "kcal": 523, "prot": 43, "carb": 49, "fat": 13.8, "fibra": 4.5}, {"desc": "Tortilla de acelga ", "kcal": 190, "prot": 16.5, "carb": 2.7, "fat": 12.5, "fibra": 1.5}, {"desc": "2 galletas de arroz con queso y huevo. 1 banana", "kcal": 332, "prot": 22, "carb": 28, "fat": 15, "fibra": 1.5}, {"desc": "Bowl ensalada de quinoa", "kcal": 197, "prot": 6.5, "carb": 35, "fat": 2.5, "fibra": 4.6}, {"desc": "Kaki chico", "kcal": 90, "prot": 0.6, "carb": 20, "fat": 0, "fibra": 3}, {"desc": "Zanahoria con atún y aceite de oliva. 1 kaki", "kcal": 265, "prot": 20.6, "carb": 33.5, "fat": 5.8, "fibra": 7.4}, {"desc": "1/4 tortilla de acelga", "kcal": 85, "prot": 5, "carb": 2, "fat": 5, "fibra": 1}, {"desc": "Manzana ", "kcal": 95, "prot": 0.5, "carb": 24, "fat": 0, "fibra": 4.4}, {"desc": "Desayuno proteico ", "kcal": 591, "prot": 45, "carb": 57, "fat": 20, "fibra": 1}, {"desc": "Pizza con muzzarella ", "kcal": 440, "prot": 18, "carb": 56, "fat": 16, "fibra": 0}, {"desc": "Alfajor proteico", "kcal": 442, "prot": 19, "carb": 22, "fat": 31, "fibra": 8}, {"desc": "Gelatina sin sabor", "kcal": 50, "prot": 8, "carb": 6, "fat": 0, "fibra": 0}, {"desc": "Pan con queso magro", "kcal": 210, "prot": 12, "carb": 26, "fat": 6, "fibra": 1}, {"desc": "Yogur griego con 2 de avena y 1 de proteina", "kcal": 392, "prot": 25, "carb": 42, "fat": 14, "fibra": 3}, {"desc": "Barra proteica best", "kcal": 207, "prot": 20, "carb": 15, "fat": 8.5, "fibra": 11}, {"desc": "Guiso", "kcal": 750, "prot": 60, "carb": 85, "fat": 15, "fibra": 9}, {"desc": "Atún con palta y galletas de arroz", "kcal": 379, "prot": 42, "carb": 28, "fat": 12, "fibra": 5}, {"desc": "Sopa de calabaza ", "kcal": 98, "prot": 2, "carb": 21, "fat": 0, "fibra": 4}, {"desc": "Yogurt con avena y proteína de soba", "kcal": 386, "prot": 30, "carb": 49, "fat": 7.7, "fibra": 4.5}, {"desc": "Yogur y 2 barras proteicaa", "kcal": 337, "prot": 35, "carb": 38, "fat": 7, "fibra": 3.8}, {"desc": "Ravioles", "kcal": 690, "prot": 26, "carb": 103, "fat": 17, "fibra": 4}, {"desc": "Café con leche, panqueques de avena, naranja, banana", "kcal": 338, "prot": 15, "carb": 65, "fat": 3, "fibra": 7}, {"desc": "Chocolates", "kcal": 325, "prot": 7, "carb": 35, "fat": 17, "fibra": 2}, {"desc": "Milanesas de pesadilla con papá y boniato al horno y ensalada", "kcal": 688, "prot": 40, "carb": 92, "fat": 14, "fibra": 9}, {"desc": "Barra y Yogur proteico", "kcal": 352, "prot": 35, "carb": 29, "fat": 10, "fibra": 11}, {"desc": "Café con leche, galletas de arroz con palta y pizza", "kcal": 448, "prot": 19, "carb": 55, "fat": 18, "fibra": 5}, {"desc": "Huevo duro y pizza ", "kcal": 730, "prot": 33, "carb": 84, "fat": 29, "fibra": 3}, {"desc": "Yogur con avena y pan con queso magro", "kcal": 589, "prot": 30, "carb": 93, "fat": 10, "fibra": 7}, {"desc": "Milanesas de pesadilla con arroz", "kcal": 575, "prot": 38, "carb": 65, "fat": 14, "fibra": 1.5}, {"desc": "Huevo duro", "kcal": 70, "prot": 6, "carb": 0.5, "fat": 5, "fibra": 0}, {"desc": "Café con leche 3 panes con queso magro", "kcal": 540, "prot": 28, "carb": 88, "fat": 8, "fibra": 3}, {"desc": "Mix frutos secos", "kcal": 480, "prot": 14, "carb": 18, "fat": 40, "fibra": 5}, {"desc": "Milanesa de pollo al pan", "kcal": 705, "prot": 40, "carb": 70, "fat": 31, "fibra": 2.5}, {"desc": "Arroz con atún y huevo duro", "kcal": 526, "prot": 45, "carb": 58, "fat": 11, "fibra": 0}, {"desc": "Gatorade 350cc", "kcal": 80, "prot": 0, "carb": 21, "fat": 0, "fibra": 0}, {"desc": "Yogurt con avena y 1 manzana", "kcal": 344, "prot": 14, "carb": 66, "fat": 3, "fibra": 8.5}, {"desc": "Guiso lentejas y arroz", "kcal": 542, "prot": 52, "carb": 68, "fat": 7, "fibra": 8}, {"desc": "Café con leche y 2 panes con palta ", "kcal": 430, "prot": 17, "carb": 66, "fat": 12, "fibra": 6}, {"desc": "Pizza muzzarela", "kcal": 880, "prot": 32, "carb": 96, "fat": 36, "fibra": 4}, {"desc": "Banana", "kcal": 107, "prot": 1.4, "carb": 27, "fat": 0, "fibra": 3}, {"desc": "Rissoto champiñonds", "kcal": 610, "prot": 12.5, "carb": 70, "fat": 25, "fibra": 3}, {"desc": "Helado", "kcal": 218, "prot": 4.2, "carb": 30, "fat": 10, "fibra": 1}, {"desc": "Guiso de lentejas", "kcal": 430, "prot": 43, "carb": 55, "fat": 5.5, "fibra": 12}, {"desc": "Café con leche y 2 panes con palta y huevo ", "kcal": 520, "prot": 27, "carb": 57, "fat": 16, "fibra": 6}, {"desc": "Merluza a la plancha con humus", "kcal": 305, "prot": 42, "carb": 10, "fat": 11, "fibra": 3}, {"desc": "Café con leche y 2 panes con queso ", "kcal": 475, "prot": 25, "carb": 62, "fat": 14, "fibra": 2}, {"desc": "Merlusa, tortilla de papa y ensalada", "kcal": 852, "prot": 58, "carb": 93, "fat": 24, "fibra": 10}, {"desc": "Tortilla y banana", "kcal": 442, "prot": 17, "carb": 71, "fat": 8, "fibra": 4}, {"desc": "3 cucharadas de avena", "kcal": 171, "prot": 6, "carb": 30, "fat": 3, "fibra": 5}, {"desc": "Café con leche, 2 galletas de arroz con queso ", "kcal": 238, "prot": 16, "carb": 23, "fat": 9, "fibra": 0}, {"desc": "Milanesa de merlusa, quinoa, ensalada ", "kcal": 629, "prot": 48, "carb": 54, "fat": 20, "fibra": 4}, {"desc": "Café con leche, 2 galletas de arroz con palta y omelet ", "kcal": 368, "prot": 22, "carb": 28, "fat": 20, "fibra": 4}, {"desc": "Snack molino platano", "kcal": 204, "prot": 2, "carb": 42, "fat": 3, "fibra": 2}, {"desc": "3 empanadas Pagnifique (2 carne 1 pollo), barra cereal mix original", "kcal": 704, "prot": 31, "carb": 92, "fat": 27, "fibra": 4}, {"desc": "Café con leche, 2 galletas de arroz con palta y queso", "kcal": 265, "prot": 15, "carb": 26, "fat": 12, "fibra": 3}], "w1_d1": {"status": "done", "note": "", "km": 15, "time": "1:30:00", "distReal": "15.00", "pace": "6:00 /km", "rpe": 3, "realDate": "2026-05-18"}, "w1_d3": {"status": "done", "note": "", "km": 0, "time": "", "distReal": "", "pace": "", "rpe": 0, "realDate": "2026-05-20"}, "_weights": [{"date": "2026-05-23", "kg": 73.2}, {"date": "2026-05-24", "kg": 72.9}], "_nutri": {"2026-05-23": {"meals": [{"name": "Desayuno", "desc": "Café con leche, 2 galletas de arroz con palta y omelet ", "kcal": 368, "prot": 22, "carb": 28, "fat": 20, "fibra": 4}, {"name": "Almuerzo", "desc": "Milanesa de merlusa, quinoa, ensalada ", "kcal": 629, "prot": 48, "carb": 54, "fat": 20, "fibra": 4}, {"name": "Merienda", "desc": "Café con leche, 2 galletas de arroz con queso ", "kcal": 238, "prot": 16, "carb": 23, "fat": 9, "fibra": 0}, {"name": "Snack", "desc": "3 cucharadas de avena", "kcal": 171, "prot": 6, "carb": 30, "fat": 3, "fibra": 5}, {"name": "Cena", "desc": "Tortilla y banana", "kcal": 442, "prot": 17, "carb": 71, "fat": 8, "fibra": 4}], "kcal": 1848, "prot": 109, "carb": 206, "fat": 60, "fibra": 17}, "2026-05-24": {"meals": [{"name": "Desayuno", "desc": "Café con leche, 2 galletas de arroz con palta y omelet ", "kcal": 368, "prot": 22, "carb": 28, "fat": 20, "fibra": 4}, {"name": "Almuerzo", "desc": "Merlusa, tortilla de papa y ensalada", "kcal": 852, "prot": 58, "carb": 93, "fat": 24, "fibra": 10}, {"name": "Merienda", "desc": "Café con leche y 2 panes con queso ", "kcal": 475, "prot": 25, "carb": 62, "fat": 14, "fibra": 2}, {"name": "Cena", "desc": "Merluza a la plancha con humus", "kcal": 305, "prot": 42, "carb": 10, "fat": 11, "fibra": 3}], "kcal": 2000, "prot": 147, "carb": 193, "fat": 69, "fibra": 19}, "2026-05-25": {"meals": [{"name": "Desayuno", "desc": "Café con leche y 2 panes con palta y huevo ", "kcal": 520, "prot": 27, "carb": 57, "fat": 23, "fibra": 6}, {"name": "Snack", "desc": "3 cucharadas de avena", "kcal": 171, "prot": 6, "carb": 30, "fat": 3, "fibra": 5}, {"name": "Almuerzo", "desc": "Guiso de lentejas", "kcal": 430, "prot": 43, "carb": 55, "fat": 5.5, "fibra": 12}, {"name": "Desayuno", "desc": "Helado", "kcal": 111, "prot": 2, "carb": 17, "fat": 4, "fibra": 0}, {"name": "Merienda", "desc": "Café con leche y 2 panes con queso ", "kcal": 475, "prot": 25, "carb": 62, "fat": 14, "fibra": 2}, {"name": "Cena", "desc": "Rissoto champiñonds", "kcal": 610, "prot": 12.5, "carb": 70, "fat": 25, "fibra": 3}], "kcal": 2317, "prot": 116, "carb": 291, "fat": 75, "fibra": 28}, "2026-05-26": {"meals": [{"name": "Desayuno", "desc": "Café con leche, 2 galletas de arroz con palta y omelet ", "kcal": 368, "prot": 22, "carb": 28, "fat": 20, "fibra": 4}, {"name": "Snack", "desc": "Banana", "kcal": 107, "prot": 1.3, "carb": 27, "fat": 0, "fibra": 3}, {"name": "Almuerzo", "desc": "Guiso de lentejas", "kcal": 430, "prot": 43, "carb": 55, "fat": 5.5, "fibra": 12}, {"name": "Cena", "desc": "Pizza muzzarela", "kcal": 880, "prot": 32, "carb": 96, "fat": 36, "fibra": 4}], "kcal": 1785, "prot": 98, "carb": 206, "fat": 62, "fibra": 23}, "2026-05-27": {"meals": [{"name": "Desayuno", "desc": "Café con leche y 2 panes con palta ", "kcal": 430, "prot": 17, "carb": 66, "fat": 12, "fibra": 6}, {"name": "Snack", "desc": "Banana", "kcal": 107, "prot": 1.3, "carb": 27, "fat": 0, "fibra": 3}, {"name": "Almuerzo", "desc": "Guiso lentejas y arroz", "kcal": 542, "prot": 52, "carb": 68, "fat": 7, "fibra": 8}, {"name": "Snack", "desc": "Helado", "kcal": 218, "prot": 4.2, "carb": 30, "fat": 10, "fibra": 1}, {"name": "Merienda", "desc": "Yogurt con avena y 1 manzana", "kcal": 344, "prot": 14, "carb": 66, "fat": 3, "fibra": 8.5}, {"name": "Snack", "desc": "Gatorade 350cc", "kcal": 80, "prot": 0, "carb": 21, "fat": 0, "fibra": 0}, {"name": "Cena", "desc": "Arroz con atún y huevo duro", "kcal": 526, "prot": 45, "carb": 58, "fat": 11, "fibra": 0}], "kcal": 2247, "prot": 134, "carb": 336, "fat": 43, "fibra": 27}, "2026-05-28": {"meals": [{"name": "Desayuno", "desc": "Café con leche y 2 panes con palta y huevo ", "kcal": 520, "prot": 27, "carb": 57, "fat": 23, "fibra": 6}, {"name": "Almuerzo", "desc": "Milanesa de pollo al pan", "kcal": 705, "prot": 40, "carb": 70, "fat": 31, "fibra": 2.5}, {"name": "Snack", "desc": "Mix frutos secos", "kcal": 480, "prot": 14, "carb": 18, "fat": 40, "fibra": 5}, {"name": "Merienda", "desc": "Café con leche 3 panes con queso magro", "kcal": 540, "prot": 28, "carb": 88, "fat": 8, "fibra": 3}, {"name": "Snack", "desc": "Huevo duro", "kcal": 70, "prot": 6, "carb": 0.5, "fat": 5, "fibra": 0}], "kcal": 2315, "prot": 115, "carb": 234, "fat": 107, "fibra": 17}, "2026-05-29": {"meals": [{"name": "Desayuno", "desc": "Café con leche y 2 panes con palta y huevo ", "kcal": 520, "prot": 27, "carb": 57, "fat": 23, "fibra": 6}, {"name": "Almuerzo", "desc": "Milanesas de pesadilla con arroz", "kcal": 575, "prot": 38, "carb": 65, "fat": 14, "fibra": 1.5}, {"name": "Merienda", "desc": "Yogur con avena y pan con queso magro", "kcal": 589, "prot": 30, "carb": 93, "fat": 10, "fibra": 7}, {"name": "Cena", "desc": "Huevo duro y pizza ", "kcal": 730, "prot": 33, "carb": 84, "fat": 29, "fibra": 3}, {"name": "Snack", "desc": "Banana", "kcal": 107, "prot": 1.3, "carb": 27, "fat": 0, "fibra": 3}], "kcal": 2521, "prot": 129, "carb": 326, "fat": 76, "fibra": 21}, "2026-05-30": {"meals": [{"name": "Desayuno", "desc": "Café con leche, galletas de arroz con palta y pizza", "kcal": 448, "prot": 19, "carb": 55, "fat": 18, "fibra": 5}, {"name": "Snack", "desc": "Barra y Yogur proteico", "kcal": 352, "prot": 35, "carb": 29, "fat": 10, "fibra": 11}, {"name": "Almuerzo", "desc": "Milanesas de pesadilla con papá y boniato al horno y ensalada", "kcal": 688, "prot": 40, "carb": 92, "fat": 14, "fibra": 9}, {"name": "Snack", "desc": "Chocolates", "kcal": 325, "prot": 7, "carb": 35, "fat": 17, "fibra": 2}], "kcal": 1813, "prot": 101, "carb": 211, "fat": 59, "fibra": 27}, "2026-05-31": {"meals": [{"name": "Desayuno", "desc": "Café con leche, panqueques de avena, naranja, banana", "kcal": 338, "prot": 15, "carb": 65, "fat": 3, "fibra": 7}, {"name": "Almuerzo", "desc": "Ravioles", "kcal": 690, "prot": 26, "carb": 103, "fat": 17, "fibra": 4}, {"name": "Snack", "desc": "Yogur y 2 barras proteicaa", "kcal": 337, "prot": 35, "carb": 38, "fat": 7, "fibra": 3.8}, {"name": "Merienda", "desc": "Yogurt con avena y proteína de soba", "kcal": 386, "prot": 30, "carb": 49, "fat": 7.7, "fibra": 4.5}, {"name": "Cena", "desc": "Sopa de calabaza ", "kcal": 98, "prot": 2, "carb": 21, "fat": 0, "fibra": 4}, {"name": "Cena", "desc": "Atún con palta y galletas de arroz", "kcal": 379, "prot": 42, "carb": 28, "fat": 12, "fibra": 5}], "kcal": 2228, "prot": 150, "carb": 304, "fat": 47, "fibra": 28}, "2026-06-01": {"meals": [{"name": "Desayuno", "desc": "Café con leche y 2 panes con palta y huevo ", "kcal": 520, "prot": 27, "carb": 57, "fat": 16, "fibra": 6}, {"name": "Almuerzo", "desc": "Guiso", "kcal": 500, "prot": 40, "carb": 58, "fat": 10, "fibra": 6}, {"name": "Snack", "desc": "Barra proteica best", "kcal": 207, "prot": 20, "carb": 15, "fat": 8.5, "fibra": 11}, {"name": "Merienda", "desc": "Yogur griego con 2 de avena y 1 de proteina", "kcal": 392, "prot": 25, "carb": 42, "fat": 14, "fibra": 3}, {"name": "Merienda", "desc": "Pan con queso magro", "kcal": 210, "prot": 12, "carb": 26, "fat": 6, "fibra": 1}, {"name": "Snack", "desc": "Gelatina sin sabor", "kcal": 50, "prot": 8, "carb": 6, "fat": 0, "fibra": 0}], "kcal": 1879, "prot": 132, "carb": 204, "fat": 55, "fibra": 27}, "2026-06-02": {"meals": [{"name": "Desayuno", "desc": "Café con leche y 2 panes con palta y huevo ", "kcal": 520, "prot": 27, "carb": 57, "fat": 16, "fibra": 6}, {"name": "Almuerzo", "desc": "Guiso", "kcal": 500, "prot": 40, "carb": 58, "fat": 10, "fibra": 6}, {"name": "Snack", "desc": "Gelatina sin sabor", "kcal": 50, "prot": 8, "carb": 6, "fat": 0, "fibra": 0}, {"name": "Merienda", "desc": "Yogur griego con 2 de avena y 1 de proteina", "kcal": 392, "prot": 25, "carb": 42, "fat": 14, "fibra": 3}, {"name": "Snack", "desc": "Gatorade 350cc", "kcal": 80, "prot": 0, "carb": 21, "fat": 0, "fibra": 0}, {"name": "Snack", "desc": "Alfajor proteico", "kcal": 442, "prot": 19, "carb": 22, "fat": 31, "fibra": 8}, {"name": "Cena", "desc": "Pizza con muzzarella ", "kcal": 440, "prot": 18, "carb": 56, "fat": 16, "fibra": 0}, {"name": "Cena", "desc": "Banana", "kcal": 107, "prot": 1.3, "carb": 27, "fat": 0, "fibra": 3}], "kcal": 2531, "prot": 138, "carb": 289, "fat": 87, "fibra": 26}, "2026-06-03": {"meals": [{"name": "Desayuno", "desc": "Desayuno proteico ", "kcal": 591, "prot": 45, "carb": 57, "fat": 20, "fibra": 1}, {"name": "Almuerzo", "desc": "Guiso", "kcal": 750, "prot": 60, "carb": 85, "fat": 15, "fibra": 9}, {"name": "Merienda", "desc": "Yogur griego con 2 de avena y 1 de proteina", "kcal": 392, "prot": 25, "carb": 42, "fat": 14, "fibra": 3}, {"name": "Merienda", "desc": "Manzana ", "kcal": 95, "prot": 0.5, "carb": 25, "fat": 0, "fibra": 4}, {"name": "Cena", "desc": "1/4 tortilla de acelga", "kcal": 85, "prot": 5, "carb": 2, "fat": 5, "fibra": 1}, {"name": "Snack", "desc": "Zanahoria con atún y aceite de oliva. 1 kaki", "kcal": 265, "prot": 20.6, "carb": 33.5, "fat": 5.8, "fibra": 7.4}, {"name": "Snack", "desc": "3 cucharadas de avena", "kcal": 171, "prot": 6, "carb": 30, "fat": 3, "fibra": 5}], "kcal": 2349, "prot": 162, "carb": 275, "fat": 63, "fibra": 30}, "2026-06-04": {"meals": [{"name": "Snack", "desc": "Banana", "kcal": 107, "prot": 1.3, "carb": 27, "fat": 0, "fibra": 3}, {"name": "Desayuno", "desc": "Café con leche, 2 galletas de arroz con palta y omelet ", "kcal": 368, "prot": 22, "carb": 28, "fat": 20, "fibra": 4}, {"name": "Desayuno", "desc": "Kaki chico", "kcal": 60, "prot": 0.4, "carb": 16, "fat": 0, "fibra": 2.3}, {"name": "Almuerzo", "desc": "Bowl ensalada de quinoa", "kcal": 197, "prot": 6.5, "carb": 35, "fat": 2.5, "fibra": 4.6}, {"name": "Merienda", "desc": "Yogur griego con 2 de avena y 1 de proteina", "kcal": 392, "prot": 25, "carb": 42, "fat": 14, "fibra": 3}, {"name": "Merienda", "desc": "2 galletas de arroz con queso y huevo. 1 banana", "kcal": 332, "prot": 22, "carb": 28, "fat": 15, "fibra": 1.5}, {"name": "Cena", "desc": "Tortilla de acelga ", "kcal": 190, "prot": 16.5, "carb": 2.7, "fat": 12.5, "fibra": 1.5}, {"name": "Cena", "desc": "Yogur griego con 3 de prote y 3 de avena", "kcal": 523, "prot": 43, "carb": 49, "fat": 13.8, "fibra": 4.5}], "kcal": 2169, "prot": 137, "carb": 228, "fat": 78, "fibra": 24}, "2026-06-05": {"meals": [{"name": "Desayuno", "desc": "Café con leche, galletas de arroz, omelet 4 huevos, manzana", "kcal": 503, "prot": 33, "carb": 49, "fat": 20, "fibra": 4}, {"name": "Snack", "desc": "Yogur proteico 190ml", "kcal": 135, "prot": 15, "carb": 14, "fat": 1.9, "fibra": 0}, {"name": "Snack", "desc": "Media banana", "kcal": 54, "prot": 0.7, "carb": 14, "fat": 0, "fibra": 1.5}, {"name": "Almuerzo", "desc": "Milanesas de pesadilla, quinoa, ensalada de repollo y zanahoria ", "kcal": 623, "prot": 43, "carb": 67, "fat": 17.6, "fibra": 8.1}, {"name": "Snack", "desc": "Manzana ", "kcal": 95, "prot": 0.5, "carb": 24, "fat": 0, "fibra": 4.4}, {"name": "Merienda", "desc": "Yogur colonial con 3 de prote, 4 de avena y 1 banana", "kcal": 596, "prot": 44, "carb": 97, "fat": 4, "fibra": 9}, {"name": "Cena", "desc": "Chivito de pollo", "kcal": 484, "prot": 46.5, "carb": 37, "fat": 15.8, "fibra": 7.1}], "kcal": 2490, "prot": 183, "carb": 302, "fat": 59, "fibra": 34}, "2026-06-06": {"meals": [{"name": "Desayuno", "desc": "Yogur colonial con 3 de prote, 4 de avena y 1 banana", "kcal": 596, "prot": 44, "carb": 97, "fat": 4, "fibra": 9}, {"name": "Almuerzo", "desc": "Milanesas de pesadilla, quinoa, ensalada de repollo y zanahoria ", "kcal": 623, "prot": 43, "carb": 67, "fat": 17.6, "fibra": 8.1}, {"name": "Merienda", "desc": "Kaki chico", "kcal": 90, "prot": 0.6, "carb": 20, "fat": 0, "fibra": 3}, {"name": "Merienda", "desc": "Leche y scones", "kcal": 330, "prot": 24, "carb": 52, "fat": 2, "fibra": 1}, {"name": "Cena", "desc": "1.5 Huevo duro", "kcal": 105, "prot": 9, "carb": 0.7, "fat": 7, "fibra": 0}, {"name": "Cena", "desc": "Banana", "kcal": 107, "prot": 1.4, "carb": 27, "fat": 0, "fibra": 3}, {"name": "Cena", "desc": "3 cucharadas de avena", "kcal": 171, "prot": 6, "carb": 30, "fat": 3, "fibra": 5}], "kcal": 2022, "prot": 128, "carb": 294, "fat": 34, "fibra": 29}, "2026-06-07": {"meals": [{"name": "Desayuno", "desc": "Yogurisimo con 3 de avena y 3 de prote ", "kcal": 474, "prot": 41, "carb": 56.6, "fat": 9.2, "fibra": 4.5}, {"name": "Snack", "desc": "Gatorade 350cc", "kcal": 80, "prot": 0, "carb": 21, "fat": 0, "fibra": 0}, {"name": "Desayuno", "desc": "Yogurisimo, 2 de prote, pan con palta y kaki", "kcal": 593, "prot": 33, "carb": 79, "fat": 18.6, "fibra": 7.8}, {"name": "Almuerzo", "desc": "Suprema a la plancha, con arroz y ensalada", "kcal": 654, "prot": 97, "carb": 35, "fat": 10, "fibra": 2.5}, {"name": "Merienda", "desc": "Chipa, kaki, mate", "kcal": 348, "prot": 8, "carb": 51, "fat": 12, "fibra": 2}, {"name": "Cena", "desc": "4 cucharadas de avena, 1 banana, 1 manzana", "kcal": 430, "prot": 9.8, "carb": 92, "fat": 4, "fibra": 13}], "kcal": 2579, "prot": 189, "carb": 335, "fat": 54, "fibra": 30}, "2026-06-08": {"meals": [{"name": "Desayuno", "desc": "Yogurisimo con 3 de prote, 3 de avena, 1 pan con palta ", "kcal": 679, "prot": 45, "carb": 82.6, "fat": 20.7, "fibra": 9.5}, {"name": "Almuerzo", "desc": "Guiso de lentejas", "kcal": 430, "prot": 43, "carb": 55, "fat": 5.5, "fibra": 12}, {"name": "Snack", "desc": "Kaki chico", "kcal": 90, "prot": 0.6, "carb": 20, "fat": 0, "fibra": 3}, {"name": "Snack", "desc": "Media banana", "kcal": 54, "prot": 0.7, "carb": 14, "fat": 0, "fibra": 1.5}, {"name": "Cena", "desc": "Pan con palta, huevo, chauchas", "kcal": 460, "prot": 15, "carb": 53, "fat": 23, "fibra": 9.5}], "kcal": 1713, "prot": 104, "carb": 225, "fat": 49, "fibra": 36}, "2026-06-09": {"meals": [{"name": "Desayuno", "desc": "Café con leche, galletas de arroz con maní y queso, kaki, banana", "kcal": 475, "prot": 25, "carb": 65.7, "fat": 13.6, "fibra": 6.1}], "kcal": 475, "prot": 25, "carb": 66, "fat": 14, "fibra": 6}}, "_gymWeights": {"gym-day1_Sentadilla_en_Smith": [{"kg": 20, "reps": "12", "date": "23/5/2026", "ts": 1779538439370}, {"date": "4/6/2026", "ts": 1780620519351, "kg": 25, "reps": "12"}], "gym-day2_Sentadilla_en_Smith": [{"kg": 20, "reps": "12", "date": "23/5/2026", "ts": 1779538439370}, {"date": "4/6/2026", "ts": 1780620519351, "kg": 25, "reps": "12"}], "gym-full_Sentadilla_en_Smith": [{"kg": 20, "reps": "12", "date": "23/5/2026", "ts": 1779538439370}, {"date": "4/6/2026", "ts": 1780620519351, "kg": 25, "reps": "12"}], "gym-day1_Prensa_Inclinada": [{"kg": 100, "reps": "12", "date": "23/5/2026", "ts": 1779538665567}, {"date": "29/5/2026", "ts": 1780097725219, "kg": 110, "reps": "12"}, {"date": "29/5/2026", "ts": 1780097737148, "kg": 110, "reps": "12"}, {"date": "4/6/2026", "ts": 1780618208549, "kg": 120, "reps": "12"}], "gym-day2_Prensa_Inclinada": [{"kg": 100, "reps": "12", "date": "23/5/2026", "ts": 1779538665567}, {"date": "29/5/2026", "ts": 1780097725219, "kg": 110, "reps": "12"}, {"date": "29/5/2026", "ts": 1780097737148, "kg": 110, "reps": "12"}, {"date": "4/6/2026", "ts": 1780618208549, "kg": 120, "reps": "12"}], "gym-full_Prensa_Inclinada": [{"kg": 100, "reps": "12", "date": "23/5/2026", "ts": 1779538665567}, {"date": "29/5/2026", "ts": 1780097725219, "kg": 110, "reps": "12"}, {"date": "29/5/2026", "ts": 1780097737148, "kg": 110, "reps": "12"}, {"date": "4/6/2026", "ts": 1780618208549, "kg": 120, "reps": "12"}], "gym-day1_Estocadas_con_Mancuernas": [{"kg": 8, "reps": "10", "date": "23/5/2026", "ts": 1779539235805}, {"date": "4/6/2026", "ts": 1780623285302, "kg": 8, "reps": "10"}], "gym-day2_Estocadas_con_Mancuernas": [{"kg": 8, "reps": "10", "date": "23/5/2026", "ts": 1779539235805}, {"date": "4/6/2026", "ts": 1780623285302, "kg": 8, "reps": "10"}], "gym-full_Estocadas_con_Mancuernas": [{"kg": 8, "reps": "10", "date": "23/5/2026", "ts": 1779539235805}, {"date": "4/6/2026", "ts": 1780623285302, "kg": 8, "reps": "10"}], "gym-day1_Peso_Muerto_Rumano___Mancuernas": [{"kg": 16, "reps": "10", "date": "23/5/2026", "ts": 1779539252717}, {"date": "4/6/2026", "ts": 1780621222601, "kg": 18, "reps": "12"}], "gym-day2_Peso_Muerto_Rumano___Mancuernas": [{"kg": 16, "reps": "10", "date": "23/5/2026", "ts": 1779539252717}, {"date": "4/6/2026", "ts": 1780621222601, "kg": 18, "reps": "12"}], "gym-full_Peso_Muerto_Rumano___Mancuernas": [{"kg": 16, "reps": "10", "date": "23/5/2026", "ts": 1779539252717}, {"date": "4/6/2026", "ts": 1780621222601, "kg": 18, "reps": "12"}], "gym-day1_Aductores_en_M_quina": [{"kg": 20, "reps": "15", "date": "23/5/2026", "ts": 1779539272759}, {"date": "4/6/2026", "ts": 1780619535884, "kg": 20, "reps": "15"}], "gym-day2_Aductores_en_M_quina": [{"kg": 20, "reps": "15", "date": "23/5/2026", "ts": 1779539272759}, {"date": "4/6/2026", "ts": 1780619535884, "kg": 20, "reps": "15"}], "gym-full_Aductores_en_M_quina": [{"kg": 20, "reps": "15", "date": "23/5/2026", "ts": 1779539272759}, {"date": "4/6/2026", "ts": 1780619535884, "kg": 20, "reps": "15"}], "gym-day1_Abductores_en_M_quina": [{"kg": 25, "reps": "15", "date": "23/5/2026", "ts": 1779539280239}, {"date": "4/6/2026", "ts": 1780619859562, "kg": 30, "reps": "15"}], "gym-day2_Abductores_en_M_quina": [{"kg": 25, "reps": "15", "date": "23/5/2026", "ts": 1779539280239}, {"date": "4/6/2026", "ts": 1780619859562, "kg": 30, "reps": "15"}], "gym-full_Abductores_en_M_quina": [{"kg": 25, "reps": "15", "date": "23/5/2026", "ts": 1779539280239}, {"date": "4/6/2026", "ts": 1780619859562, "kg": 30, "reps": "15"}], "gym-day1_Curl_Femoral": [{"kg": 35, "reps": "15", "date": "23/5/2026", "ts": 1779539292809}, {"date": "4/6/2026", "ts": 1780618755473, "kg": 35, "reps": "15"}], "gym-day2_Curl_Femoral": [{"kg": 35, "reps": "15", "date": "23/5/2026", "ts": 1779539292809}, {"date": "4/6/2026", "ts": 1780618755473, "kg": 35, "reps": "15"}], "gym-full_Curl_Femoral": [{"kg": 35, "reps": "15", "date": "23/5/2026", "ts": 1779539292809}, {"date": "4/6/2026", "ts": 1780618755473, "kg": 35, "reps": "15"}], "gym-day1_Extensi_n_de_Cu_driceps": [{"kg": 30, "reps": "15", "date": "23/5/2026", "ts": 1779539303753}, {"date": "4/6/2026", "ts": 1780621584101, "kg": 35, "reps": "15"}], "gym-day2_Extensi_n_de_Cu_driceps": [{"kg": 30, "reps": "15", "date": "23/5/2026", "ts": 1779539303753}, {"date": "4/6/2026", "ts": 1780621584101, "kg": 35, "reps": "15"}], "gym-full_Extensi_n_de_Cu_driceps": [{"kg": 30, "reps": "15", "date": "23/5/2026", "ts": 1779539303753}, {"date": "4/6/2026", "ts": 1780621584101, "kg": 35, "reps": "15"}], "gym-day1_Gemelos_en_M_quina": [{"kg": 40, "reps": "15", "date": "23/5/2026", "ts": 1779539315024}, {"date": "4/6/2026", "ts": 1780622451698, "kg": 50, "reps": "15"}], "gym-day2_Gemelos_en_M_quina": [{"kg": 40, "reps": "15", "date": "23/5/2026", "ts": 1779539315024}, {"date": "4/6/2026", "ts": 1780622451698, "kg": 50, "reps": "15"}], "gym-full_Gemelos_en_M_quina": [{"kg": 40, "reps": "15", "date": "23/5/2026", "ts": 1779539315024}, {"date": "4/6/2026", "ts": 1780622451698, "kg": 50, "reps": "15"}], "gym-day1_Plancha_con_Toque_de_Hombro": [{"date": "23/5/2026", "ts": 1779540836748, "reps": "20", "kg": 0}, {"date": "4/6/2026", "ts": 1780622509988, "reps": "30", "kg": 0}], "gym-day2_Plancha_con_Toque_de_Hombro": [{"date": "23/5/2026", "ts": 1779540836748, "reps": "20", "kg": 0}, {"date": "4/6/2026", "ts": 1780622509988, "reps": "30", "kg": 0}], "gym-full_Plancha_con_Toque_de_Hombro": [{"date": "23/5/2026", "ts": 1779540836748, "reps": "20", "kg": 0}, {"date": "4/6/2026", "ts": 1780622509988, "reps": "30", "kg": 0}], "gym-day1_Plancha_Lateral": [{"date": "23/5/2026", "ts": 1779540846441, "reps": "30", "kg": 0}, {"date": "29/5/2026", "ts": 1780101417022, "reps": "30", "kg": 0}, {"date": "4/6/2026", "ts": 1780623312906, "reps": "30", "kg": 0}], "gym-day2_Plancha_Lateral": [{"date": "23/5/2026", "ts": 1779540846441, "reps": "30", "kg": 0}, {"date": "29/5/2026", "ts": 1780101417022, "reps": "30", "kg": 0}, {"date": "4/6/2026", "ts": 1780623312906, "reps": "30", "kg": 0}], "gym-full_Plancha_Lateral": [{"date": "23/5/2026", "ts": 1779540846441, "reps": "30", "kg": 0}, {"date": "29/5/2026", "ts": 1780101417022, "reps": "30", "kg": 0}, {"date": "4/6/2026", "ts": 1780623312906, "reps": "30", "kg": 0}], "gym-day1_Crunch_Declinado": [{"date": "23/5/2026", "ts": 1779540855545, "reps": "20", "kg": 0}, {"date": "29/5/2026", "ts": 1780101411941, "reps": "20", "kg": 0}, {"date": "4/6/2026", "ts": 1780621992129, "reps": "22", "kg": 0}, {"date": "7/6/2026", "ts": 1780835362386, "reps": "20", "kg": 0}], "gym-day2_Crunch_Declinado": [{"date": "23/5/2026", "ts": 1779540855545, "reps": "20", "kg": 0}, {"date": "29/5/2026", "ts": 1780101411941, "reps": "20", "kg": 0}, {"date": "4/6/2026", "ts": 1780621992129, "reps": "22", "kg": 0}, {"date": "7/6/2026", "ts": 1780835362386, "reps": "20", "kg": 0}], "gym-full_Crunch_Declinado": [{"date": "23/5/2026", "ts": 1779540855545, "reps": "20", "kg": 0}, {"date": "29/5/2026", "ts": 1780101411941, "reps": "20", "kg": 0}, {"date": "4/6/2026", "ts": 1780621992129, "reps": "22", "kg": 0}, {"date": "7/6/2026", "ts": 1780835362386, "reps": "20", "kg": 0}], "gym-day1_Cruce_de_Poleas__Pecho_": [{"date": "24/5/2026", "ts": 1779621142591, "kg": 18, "reps": "15"}, {"date": "7/6/2026", "ts": 1780833322068, "kg": 22, "reps": "15"}], "gym-day2_Cruce_de_Poleas__Pecho_": [{"date": "24/5/2026", "ts": 1779621142591, "kg": 18, "reps": "15"}, {"date": "7/6/2026", "ts": 1780833322068, "kg": 22, "reps": "15"}], "gym-full_Cruce_de_Poleas__Pecho_": [{"date": "24/5/2026", "ts": 1779621142591, "kg": 18, "reps": "15"}, {"date": "7/6/2026", "ts": 1780833322068, "kg": 22, "reps": "15"}], "gym-day1_Face_Pull_en_Polea": [{"date": "24/5/2026", "ts": 1779621707335, "kg": 22, "reps": "15"}, {"date": "29/5/2026", "ts": 1780100280397, "kg": 27, "reps": "15"}, {"date": "29/5/2026", "ts": 1780100293285, "kg": 27, "reps": "15"}, {"date": "7/6/2026", "ts": 1780833820731, "kg": 31, "reps": "15"}], "gym-day2_Face_Pull_en_Polea": [{"date": "24/5/2026", "ts": 1779621707335, "kg": 22, "reps": "15"}, {"date": "29/5/2026", "ts": 1780100280397, "kg": 27, "reps": "15"}, {"date": "29/5/2026", "ts": 1780100293285, "kg": 27, "reps": "15"}, {"date": "7/6/2026", "ts": 1780833820731, "kg": 31, "reps": "15"}], "gym-full_Face_Pull_en_Polea": [{"date": "24/5/2026", "ts": 1779621707335, "kg": 22, "reps": "15"}, {"date": "29/5/2026", "ts": 1780100280397, "kg": 27, "reps": "15"}, {"date": "29/5/2026", "ts": 1780100293285, "kg": 27, "reps": "15"}, {"date": "7/6/2026", "ts": 1780833820731, "kg": 31, "reps": "15"}], "gym-day1_Tr_ceps_en_Polea___Cuerda": [{"date": "24/5/2026", "ts": 1779621912020, "kg": 31, "reps": "15"}, {"date": "29/5/2026", "ts": 1780099765829, "kg": 36, "reps": "15"}, {"date": "29/5/2026", "ts": 1780099774967, "kg": 36, "reps": "15"}], "gym-day2_Tr_ceps_en_Polea___Cuerda": [{"date": "24/5/2026", "ts": 1779621912020, "kg": 31, "reps": "15"}, {"date": "29/5/2026", "ts": 1780099765829, "kg": 36, "reps": "15"}, {"date": "29/5/2026", "ts": 1780099774967, "kg": 36, "reps": "15"}], "gym-full_Tr_ceps_en_Polea___Cuerda": [{"date": "24/5/2026", "ts": 1779621912020, "kg": 31, "reps": "15"}, {"date": "29/5/2026", "ts": 1780099765829, "kg": 36, "reps": "15"}, {"date": "29/5/2026", "ts": 1780099774967, "kg": 36, "reps": "15"}], "gym-day1_Curl_B_ceps_en_Polea_Baja": [{"date": "24/5/2026", "ts": 1779622408103, "kg": 31, "reps": "15"}, {"date": "29/5/2026", "ts": 1780099206340, "kg": 31, "reps": "15"}, {"date": "7/6/2026", "ts": 1780834578909, "kg": 31, "reps": "15"}], "gym-day2_Curl_B_ceps_en_Polea_Baja": [{"date": "24/5/2026", "ts": 1779622408103, "kg": 31, "reps": "15"}, {"date": "29/5/2026", "ts": 1780099206340, "kg": 31, "reps": "15"}, {"date": "7/6/2026", "ts": 1780834578909, "kg": 31, "reps": "15"}], "gym-full_Curl_B_ceps_en_Polea_Baja": [{"date": "24/5/2026", "ts": 1779622408103, "kg": 31, "reps": "15"}, {"date": "29/5/2026", "ts": 1780099206340, "kg": 31, "reps": "15"}, {"date": "7/6/2026", "ts": 1780834578909, "kg": 31, "reps": "15"}], "gym-day1_Remo_en_Polea_Baja": [{"date": "24/5/2026", "ts": 1779622934716, "kg": 31, "reps": "12"}, {"date": "29/5/2026", "ts": 1780098191478, "kg": 40.8, "reps": "14"}, {"date": "29/5/2026", "ts": 1780098208376, "kg": 40.8, "reps": "14"}, {"date": "7/6/2026", "ts": 1780832240686, "kg": 40.8, "reps": "14"}], "gym-day2_Remo_en_Polea_Baja": [{"date": "24/5/2026", "ts": 1779622934716, "kg": 31, "reps": "12"}, {"date": "29/5/2026", "ts": 1780098191478, "kg": 40.8, "reps": "14"}, {"date": "29/5/2026", "ts": 1780098208376, "kg": 40.8, "reps": "14"}, {"date": "7/6/2026", "ts": 1780832240686, "kg": 40.8, "reps": "14"}], "gym-full_Remo_en_Polea_Baja": [{"date": "24/5/2026", "ts": 1779622934716, "kg": 31, "reps": "12"}, {"date": "29/5/2026", "ts": 1780098191478, "kg": 40.8, "reps": "14"}, {"date": "29/5/2026", "ts": 1780098208376, "kg": 40.8, "reps": "14"}, {"date": "7/6/2026", "ts": 1780832240686, "kg": 40.8, "reps": "14"}], "gym-day1_Jal_n_al_Pecho_en_Polea": [{"date": "24/5/2026", "ts": 1779623504836, "kg": 31, "reps": "12"}, {"date": "29/5/2026", "ts": 1780098495311, "kg": 31, "reps": "12"}, {"date": "7/6/2026", "ts": 1780832670950, "kg": 31, "reps": "12"}], "gym-day2_Jal_n_al_Pecho_en_Polea": [{"date": "24/5/2026", "ts": 1779623504836, "kg": 31, "reps": "12"}, {"date": "29/5/2026", "ts": 1780098495311, "kg": 31, "reps": "12"}, {"date": "7/6/2026", "ts": 1780832670950, "kg": 31, "reps": "12"}], "gym-full_Jal_n_al_Pecho_en_Polea": [{"date": "24/5/2026", "ts": 1779623504836, "kg": 31, "reps": "12"}, {"date": "29/5/2026", "ts": 1780098495311, "kg": 31, "reps": "12"}, {"date": "7/6/2026", "ts": 1780832670950, "kg": 31, "reps": "12"}], "gym-day1_Press_Inclinado_Mancuernas": [{"date": "24/5/2026", "ts": 1779623766973, "kg": 12, "reps": "12"}, {"date": "29/5/2026", "ts": 1780100693383, "kg": 12, "reps": "12"}, {"date": "7/6/2026", "ts": 1780835737501, "kg": 14, "reps": "12"}], "gym-day2_Press_Inclinado_Mancuernas": [{"date": "24/5/2026", "ts": 1779623766973, "kg": 12, "reps": "12"}, {"date": "29/5/2026", "ts": 1780100693383, "kg": 12, "reps": "12"}, {"date": "7/6/2026", "ts": 1780835737501, "kg": 14, "reps": "12"}], "gym-full_Press_Inclinado_Mancuernas": [{"date": "24/5/2026", "ts": 1779623766973, "kg": 12, "reps": "12"}, {"date": "29/5/2026", "ts": 1780100693383, "kg": 12, "reps": "12"}, {"date": "7/6/2026", "ts": 1780835737501, "kg": 14, "reps": "12"}], "gym-day1_Elevaciones_Laterales_Mancuerna": [{"date": "24/5/2026", "ts": 1779624326229, "kg": 7, "reps": "12"}, {"date": "7/6/2026", "ts": 1780835926504, "kg": 7, "reps": "12"}], "gym-day2_Elevaciones_Laterales_Mancuerna": [{"date": "24/5/2026", "ts": 1779624326229, "kg": 7, "reps": "12"}, {"date": "7/6/2026", "ts": 1780835926504, "kg": 7, "reps": "12"}], "gym-full_Elevaciones_Laterales_Mancuerna": [{"date": "24/5/2026", "ts": 1779624326229, "kg": 7, "reps": "12"}, {"date": "7/6/2026", "ts": 1780835926504, "kg": 7, "reps": "12"}], "gym-day1_Press_de_Hombro_en_Polea": [{"date": "29/5/2026", "ts": 1780098956241, "kg": 30, "reps": "12"}], "gym-day2_Press_de_Hombro_en_Polea": [{"date": "29/5/2026", "ts": 1780098956241, "kg": 30, "reps": "12"}], "gym-full_Press_de_Hombro_en_Polea": [{"date": "29/5/2026", "ts": 1780098956241, "kg": 30, "reps": "12"}]}, "_notifEnabled": true, "_notifShown_2026-05-23": true, "_notifShown_2026-05-24": true, "w1_d5": {"status": "done", "note": "", "km": 0, "time": "", "distReal": "", "pace": "", "rpe": 0, "realDate": "2026-05-24"}, "_notifShown_2026-05-26": true, "w2_d1": {"status": "done", "note": "", "km": 9.55, "time": "54:15", "distReal": "9.55", "pace": "5:41 /km", "rpe": 8, "realDate": "2026-05-27"}, "_notifShown_2026-05-28": true, "w2_d3": {"status": "done", "note": "", "km": 0, "time": "", "distReal": "", "pace": "", "rpe": 0, "realDate": "2026-05-29"}, "_notifShown_2026-05-31": true, "w2_d6": {"status": "done", "note": "", "km": 10, "time": "51:17", "distReal": "10", "pace": "5:08 /km", "rpe": 4, "realDate": "2026-05-31"}, "_notifShown_2026-06-02": true, "_notifShown_2026-06-03": true, "w3_d1": {"status": "done", "note": "", "km": 16, "time": "1:33:33", "distReal": "16", "pace": "5:51 /km", "rpe": 2, "realDate": "2026-06-02"}, "_notifShown_2026-06-04": true, "_notifShown_2026-06-05": true, "w3_d3": {"status": "done", "note": "", "km": 0, "time": "", "distReal": "", "pace": "", "rpe": 0, "realDate": "2026-06-04"}, "_notifShown_2026-06-06": true, "_notifShown_2026-06-07": true, "w3_d5": {"status": "done", "note": "", "km": 0, "time": "", "distReal": "", "pace": "", "rpe": 0, "realDate": "2026-06-07"}, "_notifShown_2026-06-09": true};
 
+// ===== APP INIT =====
 function initApp(){
   var cur = getState();
   var hasSessions = Object.keys(cur).some(function(k){
     return k.startsWith('w') && cur[k] && cur[k].status;
   });
   if(!hasSessions){
-    // No data at all — restore full backup
+    // No data — restore full backup
     _cache = JSON.parse(JSON.stringify(EMBEDDED_BACKUP));
     saveStateToDB(_cache);
   } else {
-    // Has data — only sync gym weights from backup
+    // Has data — ONLY sync gym weights, never touch sessions/nutrition
     var gymBackup = EMBEDDED_BACKUP._gymWeights || {};
     var curGym = cur._gymWeights || {};
     var updated = false;
@@ -3586,7 +2720,6 @@ function initApp(){
   preloadFoodHistory();
 }
 
-// Check if IndexedDB init exists
 if(typeof loadStateFromDB === 'function'){
   loadStateFromDB().then(function(){ initApp(); });
 } else {
