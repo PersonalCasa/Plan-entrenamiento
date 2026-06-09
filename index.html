@@ -1062,8 +1062,8 @@ function updateStats(){
   Object.values(s).forEach(v=>{
     if(v?.status==='done'){sessions++;km+=parseFloat(v.distReal)||parseFloat(v.km)||0;}
   });
-  // Add extras km
-  (s._extras||[]).forEach(function(e){if(e.km)km+=parseFloat(e.km)||0;});
+  // Add extras km — only running
+  (s._extras||[]).forEach(function(e){if(e.type==='run'&&e.km)km+=parseFloat(e.km)||0;});
   // Count total planned sessions
   let totalSess=0;
   WEEKS.forEach(w=>totalSess+=w.sess.length);
@@ -1392,12 +1392,14 @@ function renderStats(){
         const wn=parseInt(key.match(/w(\d+)/)[1]);
         const d=parseInt(key.match(/d(\d+)/)[1]);
         const planned=getPlannedDate(wn,d);
-        const dateLabel=val.realDate&&val.realDate!==planned?
-          formatDateShort(val.realDate)+' ↪':formatDateShort(planned);
-        runs.push({key,desc:so.desc,km:val.distReal||val.km,time:val.time,pace:val.pace,rpe:val.rpe||0,dateLabel});
+        const realDate=val.realDate||planned;
+        const dateLabel=formatDateShort(realDate);
+        runs.push({key,desc:so.desc,km:val.distReal||val.km,time:val.time,pace:val.pace,rpe:val.rpe||0,dateLabel,realDate});
       }
     }
   });
+  // Sort by date
+  runs.sort(function(a,b){return (a.realDate||'').localeCompare(b.realDate||'');});
 
   const pc=document.getElementById('pace-chart');
   const rht=document.getElementById('run-history-table');
@@ -3429,29 +3431,33 @@ function renderPaceCharts(runs){
   // Build 3 chart canvases
   const RACE_DATE=new Date('2026-09-06');
 
+  pc.style.display='block';
   pc.innerHTML='<div style="display:flex;flex-direction:column;gap:20px;">';
 
   function buildChart(containerId, runs2, label, color, showProjection){
-    if(!runs2.length) return '<div style="font-family:DM Mono,monospace;font-size:11px;color:var(--muted);padding:8px;">Sin datos de '+label+' aún</div>';
-    const chartId='paceChart_'+containerId+'_'+Date.now();
-    return '<div>'+
-      '<div style="font-family:DM Mono,monospace;font-size:10px;letter-spacing:2px;color:'+color+';text-transform:uppercase;margin-bottom:6px;">'+label+'</div>'+
-      '<div style="position:relative;width:100%;height:160px;"><canvas id="'+chartId+'"></canvas></div>'+
-      (showProjection&&runs2.length>=2?'<div id="proj-'+chartId+'" style="font-family:DM Mono,monospace;font-size:10px;color:var(--muted);margin-top:6px;"></div>':'')+
+    if(!runs2.length) return '<div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:8px;font-family:DM Mono,monospace;font-size:11px;color:var(--muted);">'+label+' — sin datos aún</div>';
+    const chartId='paceChart_'+containerId;
+    return '<div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:8px;">'+
+      '<div style="font-family:DM Mono,monospace;font-size:10px;letter-spacing:2px;color:'+color+';text-transform:uppercase;margin-bottom:8px;">'+label+' ('+runs2.length+' sesiones)</div>'+
+      '<div style="position:relative;width:100%;height:140px;"><canvas id="'+chartId+'"></canvas></div>'+
+      (showProjection?'<div id="proj-'+chartId+'" style="font-family:DM Mono,monospace;font-size:10px;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px solid var(--border);"></div>':'')+
       '</div>';
   }
 
-  pc.innerHTML=
+  const chartHTML=
     buildChart('long',longRuns,'Fondo largo','var(--accent)',true)+
     buildChart('short',shortRuns,'Fondo corto','var(--accent2)',false)+
     buildChart('interval',intervalRuns,'Pasadas / tempo','#fb923c',false);
+  pc.innerHTML=chartHTML;
 
   // Init charts after render
   if(typeof Chart==='undefined')return;
   setTimeout(function(){
     function initChart(runs2,containerId,color,showProjection){
       if(!runs2.length)return;
-      const chartId=document.querySelector('[id^="paceChart_'+containerId+'"]');
+      // Find canvas by scanning for matching id prefix
+      const allCanvas=document.querySelectorAll('canvas[id^="paceChart_'+containerId+'"]');
+      const chartId=allCanvas[allCanvas.length-1];
       if(!chartId)return;
       const fmtPace=function(v){var m=Math.floor(v);var s=Math.round((v-m)*60);return m+':'+(s<10?'0':'')+s;};
       const isDark=matchMedia('(prefers-color-scheme:dark)').matches;
