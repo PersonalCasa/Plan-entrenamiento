@@ -386,7 +386,7 @@ svg.chart{width:100%;overflow:visible;}
   <button class="nav-tab" onclick="showPage('stats',this)">Stats</button>
   <button class="nav-tab" onclick="showPage('nutri',this)">Nutrición</button>
   <div style="flex:1"></div>
-  <span style="font-family:DM Mono,monospace;font-size:9px;color:var(--muted);align-self:center;padding:0 8px;">v3.2</span>
+  <span style="font-family:DM Mono,monospace;font-size:9px;color:var(--muted);align-self:center;padding:0 8px;">v3.3</span>
   <button id="notif-btn" onclick="toggleNotifications()" title="Recordatorios 7:00 AM"
     style="background:none;border:none;cursor:pointer;padding:0 14px;font-size:18px;color:var(--muted);transition:color .2s;display:flex;align-items:center;">🔔</button>
 </div>
@@ -3423,7 +3423,7 @@ function renderPaceCharts(runs){
     if(!runs2.length)
       return '<div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:8px;font-family:DM Mono,monospace;font-size:11px;color:var(--muted);">'+label+' — sin datos aún</div>';
     return '<div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:12px;">'+
-      '<div style="font-family:DM Mono,monospace;font-size:10px;letter-spacing:2px;color:'+color+';text-transform:uppercase;margin-bottom:8px;">'+label+' ('+runs2.length+' sesiones)</div>'+
+      '<div style="font-family:DM Mono,monospace;font-size:10px;letter-spacing:2px;color:'+color+';text-transform:uppercase;margin-bottom:8px;">'+label+' ('+runs2.length+' sesiones) — ritmos: '+runs2.map(function(r){return r.paceMin.toFixed(2);}).join(', ')+'</div>'+
       '<div style="position:relative;width:100%;height:140px;"><canvas id="'+id+'"></canvas></div>'+
       (showProj?'<div id="proj-'+id+'" style="font-family:DM Mono,monospace;font-size:10px;color:var(--muted);margin-top:8px;padding-top:6px;border-top:1px solid var(--border);"></div>':'')+
       '</div>';
