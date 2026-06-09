@@ -2804,7 +2804,7 @@ function exportToPDF(){
         var fmtL=function(v){var m=Math.floor(v);var s=Math.round((v-m)*60);return m+':'+(s<10?'0':'')+s;};
         var longP=[],shortP=[],intP=[];
         paceRunsWithPace.forEach(function(r){
-          var pv=fmtP(r.pace);
+          var pv=fmtP(r.pace.replace(/\s*\/km/,'').trim());
           var t=(r.desc.includes('largo')||r.desc.includes('MÁXIMO')||r.desc.includes('moderado'))?'long':
                (r.desc.includes('Pasadas')||r.desc.includes('pasadas')||r.desc.includes('Tempo')||r.desc.includes('tempo'))?'int':'short';
           if(t==='long')longP.push({date:r.date,pace:pv});
@@ -3401,7 +3401,9 @@ function renderPaceCharts(runs){
   // Classify runs
   const longRuns=[],shortRuns=[],intervalRuns=[];
   runs.filter(function(r){return r.pace&&r.pace!=='—';}).forEach(function(r){
-    const paceMin=(function(p){var pts=p.split(':');return parseFloat(pts[0])+(parseFloat(pts[1]||0)/60);})(r.pace);
+    const paceClean=r.pace.replace(/\s*\/km/,'').trim();
+    const paceMin=(function(p){var pts=p.split(':');return parseFloat(pts[0])+(parseFloat(pts[1]||0)/60);})(paceClean);
+    if(!paceMin||isNaN(paceMin)||paceMin<3||paceMin>12)return;
     const d=r.desc||'';
     if(d.includes('largo')||d.includes('MÁXIMO')||d.includes('moderado')) longRuns.push({...r,paceMin});
     else if(d.includes('Pasadas')||d.includes('pasadas')||d.includes('Tempo')||d.includes('tempo')||d.includes('breve')||d.includes('activación')) intervalRuns.push({...r,paceMin});
@@ -3412,7 +3414,7 @@ function renderPaceCharts(runs){
   const s=getState();
   const extras=(s._extras||[]).filter(function(e){return e.type==='run'&&e.pace;});
   extras.forEach(function(e){
-    const paceMin=(function(p){if(!p)return 0;var pts=p.split(':');return parseFloat(pts[0])+(parseFloat(pts[1]||0)/60);})(e.pace);
+    const paceMin=(function(p){if(!p)return 0;var clean=p.replace(/\s*\/km/,'').trim();var pts=clean.split(':');return parseFloat(pts[0])+(parseFloat(pts[1]||0)/60);})(e.pace);
     if(paceMin>0) longRuns.push({desc:e.desc,pace:e.pace,paceMin,dateLabel:e.date.slice(5),km:e.km,rpe:e.rpe,isExtra:true});
   });
 
