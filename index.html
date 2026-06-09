@@ -3458,7 +3458,7 @@ function renderPaceCharts(runs){
       // Projection for fondo largo
       let projDataset=null;
       if(showProjection&&runs2.length>=2){
-        // Linear regression
+        // Linear regression — pace improvement per session
         const n=runs2.length;
         const xs=runs2.map(function(_,i){return i;});
         const ys=paceVals;
@@ -3466,20 +3466,24 @@ function renderPaceCharts(runs){
         const sumY=ys.reduce(function(a,b){return a+b;},0);
         const sumXY=xs.reduce(function(a,x,i){return a+x*ys[i];},0);
         const sumX2=xs.reduce(function(a,x){return a+x*x;},0);
-        const slope=(n*sumXY-sumX*sumY)/(n*sumX2-sumX*sumX);
+        const denom=(n*sumX2-sumX*sumX);
+        const slope=denom!==0?(n*sumXY-sumX*sumY)/denom:0;
         const intercept=(sumY-slope*sumX)/n;
 
-        // Project to race day (weeks from last run)
+        // Remaining long runs to race day
         const today=new Date();
-        const weeksToRace=Math.round((RACE_DATE-today)/(7*24*3600*1000));
+        const weeksToRace=Math.max(0,Math.round((RACE_DATE-today)/(7*24*3600*1000)));
+        // Approx 1 fondo largo every 2 weeks on average
+        const remainingSessions=Math.round(weeksToRace/2);
         const lastRunIdx=n-1;
-        const projSteps=Math.max(4,weeksToRace);
-        const projPace=intercept+slope*(lastRunIdx+projSteps);
-        const projPaceStr=fmtPace(Math.max(3.5,projPace));
-        const raceTime21=projPace*21.097;
-        const raceH=Math.floor(raceTime21/60);
-        const raceM=Math.round(raceTime21%60);
-        const raceTStr=raceH+'h '+String(raceM).padStart(2,'0')+'min';
+
+        // Cap slope — max improvement 5sec/km per session, no negative (getting slower)
+        const cappedSlope=Math.max(-5/60, Math.min(0, slope));
+        const projPaceRaw=intercept+cappedSlope*(lastRunIdx+remainingSessions);
+        // Also cap: can't be faster than 4:00/km or slower than current pace
+        const currentPace=paceVals[paceVals.length-1];
+        const projPace=Math.min(currentPace, Math.max(4.0, projPaceRaw));
+        const projPaceStr=fmtPace(projPace);
 
         const projEl=document.getElementById('proj-'+chartId.id);
         if(projEl){
