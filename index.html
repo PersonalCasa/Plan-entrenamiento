@@ -386,7 +386,7 @@ svg.chart{width:100%;overflow:visible;}
   <button class="nav-tab" onclick="showPage('stats',this)">Stats</button>
   <button class="nav-tab" onclick="showPage('nutri',this)">Nutrición</button>
   <div style="flex:1"></div>
-  <span style="font-family:DM Mono,monospace;font-size:9px;color:var(--muted);align-self:center;padding:0 8px;">v2.7</span>
+  <span style="font-family:DM Mono,monospace;font-size:9px;color:var(--muted);align-self:center;padding:0 8px;">v2.8</span>
   <button id="notif-btn" onclick="toggleNotifications()" title="Recordatorios 7:00 AM"
     style="background:none;border:none;cursor:pointer;padding:0 14px;font-size:18px;color:var(--muted);transition:color .2s;display:flex;align-items:center;">🔔</button>
 </div>
@@ -535,6 +535,7 @@ svg.chart{width:100%;overflow:visible;}
       📥 Restaurar<input type="file" accept=".json" onchange="importBackup(this)" style="display:none">
     </label>
   </div>
+  <div id="debug-info" style="font-family:DM Mono,monospace;font-size:10px;color:var(--muted);margin-bottom:12px;padding:8px;background:var(--surface);border-radius:5px;display:none;"></div>
   <div style="font-family:DM Mono,monospace;font-size:10px;color:var(--muted);margin-bottom:20px;padding:8px 12px;background:var(--surface);border-radius:5px;">
     💡 Guardá un backup antes de actualizar la app — si algo sale mal lo restaurás en segundos
   </div>
@@ -1422,6 +1423,20 @@ function renderStats(){
 
   // Render 3 separate pace charts
   renderPaceCharts(runs);
+
+  // Debug info
+  const dbg=document.getElementById('debug-info');
+  if(dbg){
+    const s2=getState();
+    const doneKeys=Object.keys(s2).filter(k=>k.startsWith('w')&&s2[k]?.status==='done');
+    const runsWithPace=runs.filter(r=>r.pace&&r.pace!=='—');
+    dbg.style.display='block';
+    dbg.innerHTML='✓ Sesiones done: '+doneKeys.length+
+      ' | Corridas con ritmo: '+runsWithPace.length+
+      ' | Fondos largos: '+runs.filter(r=>r.desc&&(r.desc.includes('largo')||r.desc.includes('MÁXIMO'))).length+
+      ' | Chart.js: '+(typeof Chart!=='undefined'?'✓':'✗')+
+      '<br>Ritmos: '+runsWithPace.map(r=>r.pace).join(', ');
+  }
 
   // RPE color
   const rpeC=['','#4ade80','#86efac','#86efac','#fbbf24','#fbbf24','#fb923c','#f87171','#ef4444','#dc2626','#991b1b'];
