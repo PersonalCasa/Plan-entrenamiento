@@ -1419,30 +1419,8 @@ function renderStats(){
     rht.innerHTML='';return;
   }
 
-  // Pace chart (only runs with pace)
-  const withPace=runs.filter(r=>r.pace).map(r=>{
-    const parts=r.pace.split(':');return parseFloat(parts[0])+parseFloat(parts[1])/60;
-  });
-  if(withPace.length>=2){
-    const W=300,H=60,pad=4;
-    const minP=Math.min(...withPace)-.2,maxP=Math.max(...withPace)+.2;
-    const xS=(i)=>pad+(i/(withPace.length-1))*(W-pad*2);
-    const yS=(p)=>H-pad-(p-minP)/(maxP-minP)*(H-pad*2);
-    const pts=withPace.map((p,i)=>`${xS(i)},${yS(p)}`).join(' ');
-    const diff=withPace[withPace.length-1]-withPace[0];
-    const diffStr=(diff<=0?'':'+')+diff.toFixed(2)+' min/km';
-    const diffColor=diff<=0?'var(--ok)':'var(--fail)';
-    pc.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-      <span style="font-family:DM Mono,monospace;font-size:10px;color:var(--muted);">RITMO /km</span>
-      <span style="font-family:Bebas Neue,sans-serif;font-size:20px;color:${diffColor};">${diffStr}</span>
-    </div>
-    <svg class="chart" viewBox="0 0 ${W} ${H}">
-      <polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linejoin="round"/>
-      ${withPace.map((p,i)=>`<circle cx="${xS(i)}" cy="${yS(p)}" r="3" fill="var(--accent)"/>`).join('')}
-    </svg>`;
-  } else {
-    pc.innerHTML='<div class="chart-empty">Completá más corridas con tiempo para ver la curva de ritmo</div>';
-  }
+  // Render 3 separate pace charts
+  renderPaceCharts(runs);
 
   // RPE color
   const rpeC=['','#4ade80','#86efac','#86efac','#fbbf24','#fbbf24','#fb923c','#f87171','#ef4444','#dc2626','#991b1b'];
@@ -3505,10 +3483,17 @@ function renderPaceCharts(runs){
 
         const projEl=document.getElementById('proj-'+chartId.id);
         if(projEl){
+          const racePaceCorr=projPace*0.92; // 8% faster on race day
+          const racePaceCorrStr=fmtPace(Math.max(3.5,racePaceCorr));
+          const raceTime21=racePaceCorr*21.097;
+          const raceH=Math.floor(raceTime21/60);
+          const raceM=Math.round(raceTime21%60);
+          const raceTStr=raceH+'h '+String(raceM).padStart(2,'0')+'min';
           projEl.innerHTML=
-            '📈 Proyección al 6 Sep: <strong style="color:var(--accent);">'+projPaceStr+' /km</strong> · '+
-            'Tiempo estimado en carrera: <strong style="color:var(--ok);">'+raceTStr+'</strong>'+
-            '<span style="color:var(--muted);"> (basado en tu progresión actual)</span>';
+            '📈 Proyección ritmo fondo: <strong style="color:var(--accent);">'+projPaceStr+' /km</strong><br>'+
+            '🏁 Ritmo carrera estimado (−8%): <strong style="color:var(--accent2);">'+racePaceCorrStr+' /km</strong> · '+
+            '<strong style="color:var(--ok);">'+raceTStr+'</strong>'+
+            '<span style="color:var(--muted);font-size:9px;"> · basado en tu progresión actual</span>';
         }
 
         // Build projection line data
