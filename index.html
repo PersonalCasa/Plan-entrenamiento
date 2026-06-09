@@ -386,7 +386,7 @@ svg.chart{width:100%;overflow:visible;}
   <button class="nav-tab" onclick="showPage('stats',this)">Stats</button>
   <button class="nav-tab" onclick="showPage('nutri',this)">Nutrición</button>
   <div style="flex:1"></div>
-  <span style="font-family:DM Mono,monospace;font-size:9px;color:var(--muted);align-self:center;padding:0 8px;">v2.9</span>
+  <span style="font-family:DM Mono,monospace;font-size:9px;color:var(--muted);align-self:center;padding:0 8px;">v3.0</span>
   <button id="notif-btn" onclick="toggleNotifications()" title="Recordatorios 7:00 AM"
     style="background:none;border:none;cursor:pointer;padding:0 14px;font-size:18px;color:var(--muted);transition:color .2s;display:flex;align-items:center;">🔔</button>
 </div>
@@ -3396,161 +3396,123 @@ function deleteExtra(id){
 
 // ===== PACE CHARTS (3 separate) =====
 function renderPaceCharts(runs){
-  const pc=document.getElementById('pace-chart');
+  var pc=document.getElementById('pace-chart');
   if(!pc)return;
 
-  const rpeColors=['','#4ade80','#86efac','#86efac','#fbbf24','#fbbf24','#fb923c','#f87171','#ef4444','#dc2626','#991b1b'];
+  // Classify runs by type
+  var longRuns=[],shortRuns=[],intervalRuns=[];
 
-  // Classify runs
-  const longRuns=[],shortRuns=[],intervalRuns=[];
   runs.filter(function(r){return r.pace&&r.pace!=='—';}).forEach(function(r){
-    const paceClean=r.pace.replace(/\s*\/km/,'').trim();
-    const paceMin=(function(p){var pts=p.split(':');return parseFloat(pts[0])+(parseFloat(pts[1]||0)/60);})(paceClean);
+    var paceClean=r.pace.replace(/\s*\/km/,'').trim();
+    var parts=paceClean.split(':');
+    var paceMin=parseFloat(parts[0])+(parseFloat(parts[1]||0)/60);
     if(!paceMin||isNaN(paceMin)||paceMin<3||paceMin>12)return;
-    const d=r.desc||'';
-    if(d.includes('largo')||d.includes('MÁXIMO')||d.includes('moderado')) longRuns.push({...r,paceMin});
-    else if(d.includes('Pasadas')||d.includes('pasadas')||d.includes('Tempo')||d.includes('tempo')||d.includes('breve')||d.includes('activación')) intervalRuns.push({...r,paceMin});
-    else shortRuns.push({...r,paceMin});
+    var d=r.desc||'';
+    var entry={desc:d,pace:r.pace,paceMin:paceMin,dateLabel:r.dateLabel||'',km:r.km,rpe:r.rpe};
+    if(d.includes('largo')||d.includes('MÁXIMO')||d.includes('moderado'))
+      longRuns.push(entry);
+    else if(d.includes('Pasadas')||d.includes('pasadas')||d.includes('Tempo')||d.includes('tempo'))
+      intervalRuns.push(entry);
+    else
+      shortRuns.push(entry);
   });
 
-  // Also add extras
-  const s=getState();
-  const extras=(s._extras||[]).filter(function(e){return e.type==='run'&&e.pace;});
-  extras.forEach(function(e){
-    const paceMin=(function(p){if(!p)return 0;var clean=p.replace(/\s*\/km/,'').trim();var pts=clean.split(':');return parseFloat(pts[0])+(parseFloat(pts[1]||0)/60);})(e.pace);
-    if(paceMin>0) longRuns.push({desc:e.desc,pace:e.pace,paceMin,dateLabel:e.date.slice(5),km:e.km,rpe:e.rpe,isExtra:true});
-  });
-
-  // Build 3 chart canvases
-  const RACE_DATE=new Date('2026-09-06');
-
-  pc.style.display='block';
-
-  function buildChart(containerId, runs2, label, color, showProjection){
-    if(!runs2.length) return '<div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:8px;font-family:DM Mono,monospace;font-size:11px;color:var(--muted);">'+label+' — sin datos aún</div>';
-    const chartId='paceChart_'+containerId;
-    return '<div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:8px;">'+
+  // Build HTML with canvas placeholders
+  var html='';
+  function chartBlock(id, label, color, runs2, showProj){
+    if(!runs2.length)
+      return '<div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:8px;font-family:DM Mono,monospace;font-size:11px;color:var(--muted);">'+label+' — sin datos aún</div>';
+    return '<div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:12px;">'+
       '<div style="font-family:DM Mono,monospace;font-size:10px;letter-spacing:2px;color:'+color+';text-transform:uppercase;margin-bottom:8px;">'+label+' ('+runs2.length+' sesiones)</div>'+
-      '<div style="position:relative;width:100%;height:140px;"><canvas id="'+chartId+'"></canvas></div>'+
-      (showProjection?'<div id="proj-'+chartId+'" style="font-family:DM Mono,monospace;font-size:10px;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px solid var(--border);"></div>':'')+
+      '<div style="position:relative;width:100%;height:140px;"><canvas id="'+id+'"></canvas></div>'+
+      (showProj?'<div id="proj-'+id+'" style="font-family:DM Mono,monospace;font-size:10px;color:var(--muted);margin-top:8px;padding-top:6px;border-top:1px solid var(--border);"></div>':'')+
       '</div>';
   }
 
-  const chartHTML=
-    buildChart('long',longRuns,'Fondo largo','var(--accent)',true)+
-    buildChart('short',shortRuns,'Fondo corto','var(--accent2)',false)+
-    buildChart('interval',intervalRuns,'Pasadas / tempo','#fb923c',false);
-  pc.innerHTML=chartHTML;
+  html+=chartBlock('pcLong','Fondo largo','var(--accent)',longRuns,true);
+  html+=chartBlock('pcShort','Fondo corto','var(--accent2)',shortRuns,false);
+  html+=chartBlock('pcInterval','Pasadas / tempo','#fb923c',intervalRuns,false);
+  pc.innerHTML=html;
 
-  // Init charts after render — use requestAnimationFrame to ensure DOM is ready
-  function tryInitCharts(attempt){
-    if(attempt>10)return;
-    const longEl=document.getElementById('paceChart_long');
-    if(!longEl){
-      setTimeout(function(){tryInitCharts(attempt+1);},200);
-      return;
-    }
-    if(typeof Chart==='undefined'){
-      setTimeout(function(){tryInitCharts(attempt+1);},300);
-      return;
-    }
-    function initChart(runs2,containerId,color,showProjection){
+  // Draw charts after DOM update
+  setTimeout(function(){
+    var RACE_DATE=new Date('2026-09-06');
+    var fmtPace=function(v){var m=Math.floor(v);var s=Math.round((v-m)*60);return m+':'+(s<10?'0':'')+s;};
+    var isDark=matchMedia('(prefers-color-scheme:dark)').matches;
+    var gridColor=isDark?'rgba(255,255,255,.06)':'rgba(0,0,0,.06)';
+    var textColor=isDark?'#aaa':'#888';
+
+    function drawChart(canvasId, runs2, color, showProj){
       if(!runs2.length)return;
-      // Find canvas by scanning for matching id prefix
-      const allCanvas=document.querySelectorAll('canvas[id^="paceChart_'+containerId+'"]');
-      const chartId=allCanvas[allCanvas.length-1];
-      if(!chartId)return;
-      const fmtPace=function(v){var m=Math.floor(v);var s=Math.round((v-m)*60);return m+':'+(s<10?'0':'')+s;};
-      const isDark=matchMedia('(prefers-color-scheme:dark)').matches;
-      const gridColor=isDark?'rgba(255,255,255,.06)':'rgba(0,0,0,.06)';
-      const textColor=isDark?'#aaa':'#888';
-      const paceVals=runs2.map(function(r){return r.paceMin;});
-      const minP=Math.min.apply(null,paceVals)-.3;
-      const maxP=Math.max.apply(null,paceVals)+.3;
+      var el=document.getElementById(canvasId);
+      if(!el)return;
+      if(typeof Chart==='undefined')return;
 
-      // Projection for fondo largo
-      let projDataset=null;
-      if(showProjection&&runs2.length>=2){
-        // Linear regression — pace improvement per session
-        const n=runs2.length;
-        const xs=runs2.map(function(_,i){return i;});
-        const ys=paceVals;
-        const sumX=xs.reduce(function(a,b){return a+b;},0);
-        const sumY=ys.reduce(function(a,b){return a+b;},0);
-        const sumXY=xs.reduce(function(a,x,i){return a+x*ys[i];},0);
-        const sumX2=xs.reduce(function(a,x){return a+x*x;},0);
-        const denom=(n*sumX2-sumX*sumX);
-        const slope=denom!==0?(n*sumXY-sumX*sumY)/denom:0;
-        const intercept=(sumY-slope*sumX)/n;
+      var paceVals=runs2.map(function(r){return r.paceMin;});
+      var labels=runs2.map(function(r){return r.dateLabel;});
+      var minP=Math.min.apply(null,paceVals)-0.3;
+      var maxP=Math.max.apply(null,paceVals)+0.3;
 
-        // Remaining long runs to race day
-        const today=new Date();
-        const weeksToRace=Math.max(0,Math.round((RACE_DATE-today)/(7*24*3600*1000)));
-        // Approx 1 fondo largo every 2 weeks on average
-        const remainingSessions=Math.round(weeksToRace/2);
-        const lastRunIdx=n-1;
-
-        // Cap slope — max improvement 5sec/km per session, no negative (getting slower)
-        const cappedSlope=Math.max(-5/60, Math.min(0, slope));
-        const projPaceRaw=intercept+cappedSlope*(lastRunIdx+remainingSessions);
-        // Also cap: can't be faster than 4:00/km or slower than current pace
-        const currentPace=paceVals[paceVals.length-1];
-        const projPace=Math.min(currentPace, Math.max(4.0, projPaceRaw));
-        const projPaceStr=fmtPace(projPace);
-
-        const projEl=document.getElementById('proj-'+chartId.id);
-        if(projEl){
-          const racePaceCorr=projPace*0.92; // 8% faster on race day
-          const racePaceCorrStr=fmtPace(Math.max(3.5,racePaceCorr));
-          const raceTime21=racePaceCorr*21.097;
-          const raceH=Math.floor(raceTime21/60);
-          const raceM=Math.round(raceTime21%60);
-          const raceTStr=raceH+'h '+String(raceM).padStart(2,'0')+'min';
-          projEl.innerHTML=
-            '📈 Proyección ritmo fondo: <strong style="color:var(--accent);">'+projPaceStr+' /km</strong><br>'+
-            '🏁 Ritmo carrera estimado (−8%): <strong style="color:var(--accent2);">'+racePaceCorrStr+' /km</strong> · '+
-            '<strong style="color:var(--ok);">'+raceTStr+'</strong>'+
-            '<span style="color:var(--muted);font-size:9px;"> · basado en tu progresión actual</span>';
-        }
-
-        // Build projection line data
-        const projLabels=runs2.map(function(r){return r.dateLabel||'';});
-        for(var i=1;i<=Math.min(4,projSteps);i++){
-          projLabels.push('→S'+(n+i));
-        }
-        const projData=runs2.map(function(){return null;});
-        projData[projData.length-1]=paceVals[paceVals.length-1]; // connect from last point
-        for(var j=1;j<=Math.min(4,projSteps);j++){
-          projData.push(Math.max(3.5,intercept+slope*(lastRunIdx+j)));
-        }
-        projDataset={
-          label:'Proyección',
-          data:projData,
-          borderColor:'rgba(232,255,71,.4)',
-          borderDash:[6,4],
-          pointRadius:0,
-          tension:0.3,
-          spanGaps:true,
-          fill:false,
-        };
-      }
-
-      const datasets=[{
-        label:label,
+      var datasets=[{
+        label:'Ritmo',
         data:paceVals,
         borderColor:color,
-        backgroundColor:color.replace(')',',0.08)').replace('var(','rgba(').replace('--accent','232,255,71').replace('--accent2','71,196,255'),
+        backgroundColor:color==='var(--accent)'?'rgba(232,255,71,.08)':color==='var(--accent2)'?'rgba(71,196,255,.08)':'rgba(251,146,60,.08)',
         pointBackgroundColor:color,
         pointRadius:5,
         tension:0.3,
-        fill:false,
-        spanGaps:false,
+        fill:false
       }];
-      if(projDataset)datasets.push(projDataset);
 
-      new Chart(chartId,{
+      // Projection for fondo largo
+      if(showProj&&runs2.length>=2){
+        var n=runs2.length;
+        var sumX=0,sumY=0,sumXY=0,sumX2=0;
+        for(var i=0;i<n;i++){sumX+=i;sumY+=paceVals[i];sumXY+=i*paceVals[i];sumX2+=i*i;}
+        var denom=n*sumX2-sumX*sumX;
+        var slope=denom!==0?(n*sumXY-sumX*sumY)/denom:0;
+        var intercept=(sumY-slope*sumX)/n;
+        var cappedSlope=Math.max(-5/60,Math.min(0,slope));
+        var today=new Date();
+        var weeksLeft=Math.max(0,Math.round((RACE_DATE-today)/(7*24*3600*1000)));
+        var remSess=Math.round(weeksLeft/2);
+        var projPace=Math.min(paceVals[n-1],Math.max(4.0,intercept+cappedSlope*(n-1+remSess)));
+        var projLabels=labels.slice();
+        var projData=paceVals.map(function(){return null;});
+        projData[n-1]=paceVals[n-1];
+        for(var j=1;j<=Math.min(4,remSess);j++){
+          projLabels.push('→');
+          projData.push(Math.min(paceVals[n-1],Math.max(4.0,intercept+cappedSlope*(n-1+j))));
+        }
+        labels=projLabels;
+        datasets[0].data=paceVals.concat(new Array(Math.min(4,remSess)).fill(null));
+        datasets.push({
+          label:'Proyección',
+          data:projData,
+          borderColor:'rgba(232,255,71,.5)',
+          borderDash:[6,4],
+          pointRadius:0,
+          tension:0.3,
+          fill:false,
+          spanGaps:true
+        });
+        // Show projection text
+        var projEl=document.getElementById('proj-'+canvasId);
+        if(projEl){
+          var racePaceCorr=projPace*0.92;
+          var raceTime=racePaceCorr*21.097;
+          var rH=Math.floor(raceTime/60),rM=Math.round(raceTime%60);
+          projEl.innerHTML='📈 Proyección fondo: <strong style="color:var(--accent)">'+fmtPace(projPace)+'/km</strong> · '+
+            '🏁 Carrera (−8%): <strong style="color:var(--accent2)">'+fmtPace(racePaceCorr)+'/km</strong> · '+
+            '<strong style="color:var(--ok)">'+rH+'h '+String(rM).padStart(2,'0')+'min</strong>';
+        }
+      }
+
+      var existing=Chart.getChart(el);
+      if(existing)existing.destroy();
+      new Chart(el,{
         type:'line',
-        data:{labels:runs2.map(function(r){return r.dateLabel||'';}),datasets},
+        data:{labels:labels,datasets:datasets},
         options:{
           responsive:true,maintainAspectRatio:false,
           plugins:{legend:{display:false}},
@@ -3562,36 +3524,11 @@ function renderPaceCharts(runs){
         }
       });
     }
-    initChart(longRuns,'long','var(--accent)',true);
-    initChart(shortRuns,'short','var(--accent2)',false);
-    initChart(intervalRuns,'interval','#fb923c',false);
-  }
-  tryInitCharts(0);
-}
 
-// ===== INIT =====
-// Load state from IndexedDB then render everything
-loadStateFromDB().then(function(){
-  cleanAllWeightLogs();
-  renderGym(GYM_DAY1,'gym-day1');
-  renderGym(GYM_DAY2,'gym-day2');
-  renderGym(GYM_FULL,'gym-full');
-  render();
-  initNotifBtn();
-  preloadFoodHistory();
-});
-
-// Load Chart.js for stats page
-if(!window.Chart){
-  var chartScript=document.createElement('script');
-  chartScript.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js';
-  document.head.appendChild(chartScript);
-}
-
-if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('/Plan-entrenamiento/sw.js').catch(e=>console.log('SW:',e));
-  });
+    drawChart('pcLong',longRuns,'var(--accent)',true);
+    drawChart('pcShort',shortRuns,'var(--accent2)',false);
+    drawChart('pcInterval',intervalRuns,'#fb923c',false);
+  },300);
 }
 </script>
 </body>
