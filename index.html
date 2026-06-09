@@ -414,6 +414,10 @@ svg.chart{width:100%;overflow:visible;}
 </div>
 <main>
   <div id="current-week-section"></div>
+  <button onclick="openExtraTraining()"
+    style="width:100%;margin-bottom:16px;padding:10px;background:rgba(71,196,255,.08);border:1px dashed rgba(71,196,255,.3);border-radius:7px;font-family:DM Mono,monospace;font-size:10px;letter-spacing:2px;color:var(--accent2);cursor:pointer;text-transform:uppercase;display:flex;align-items:center;justify-content:center;gap:8px;">
+    ➕ Registrar entrenamiento extra
+  </button>
   <div id="history-toggle" class="history-toggle" onclick="toggleHistory()" style="display:none">
     <span class="ht-label">📦 Semanas anteriores</span>
     <span id="history-count" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);"></span>
@@ -423,7 +427,75 @@ svg.chart{width:100%;overflow:visible;}
     <div class="weeks-grid" id="grid-history"></div>
   </div>
   <div id="grid-current"></div>
+  <div id="extras-list"></div>
 </main>
+</div>
+
+<!-- EXTRA TRAINING MODAL -->
+<div id="extra-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;width:100%;max-width:380px;max-height:90vh;overflow-y:auto;">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--accent);margin-bottom:16px;">Entrenamiento extra</div>
+
+    <div style="margin-bottom:12px;">
+      <div style="font-family:DM Mono,monospace;font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Tipo</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+        <button onclick="setExtraType('run')" id="et-run"
+          style="padding:10px 6px;background:rgba(232,255,71,.1);border:1px solid rgba(232,255,71,.3);border-radius:6px;font-family:DM Mono,monospace;font-size:10px;color:var(--accent);cursor:pointer;text-align:center;">
+          🏃<br>Correr
+        </button>
+        <button onclick="setExtraType('bike')" id="et-bike"
+          style="padding:10px 6px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;font-family:DM Mono,monospace;font-size:10px;color:var(--muted);cursor:pointer;text-align:center;">
+          🚴<br>Bicicleta
+        </button>
+        <button onclick="setExtraType('gym')" id="et-gym"
+          style="padding:10px 6px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;font-family:DM Mono,monospace;font-size:10px;color:var(--muted);cursor:pointer;text-align:center;">
+          💪<br>Gym
+        </button>
+      </div>
+    </div>
+
+    <div style="margin-bottom:10px;">
+      <div style="font-family:DM Mono,monospace;font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Fecha</div>
+      <input type="date" id="et-date" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:8px 10px;font-family:DM Mono,monospace;font-size:13px;color:var(--text);outline:none;">
+    </div>
+
+    <div style="margin-bottom:10px;">
+      <div style="font-family:DM Mono,monospace;font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Descripción</div>
+      <input type="text" id="et-desc" placeholder="ej: Salida suave rambla, bici con mi hija..."
+        style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:8px 10px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);outline:none;">
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+      <div id="et-km-field">
+        <div style="font-family:DM Mono,monospace;font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Distancia (km)</div>
+        <input type="number" step="0.1" id="et-km" placeholder="5.0"
+          style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:8px 10px;font-family:DM Mono,monospace;font-size:13px;color:var(--text);outline:none;">
+      </div>
+      <div>
+        <div style="font-family:DM Mono,monospace;font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Duración</div>
+        <input type="text" id="et-time" placeholder="45:00"
+          style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:8px 10px;font-family:DM Mono,monospace;font-size:13px;color:var(--text);outline:none;">
+      </div>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <div style="font-family:DM Mono,monospace;font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">RPE (1–10)</div>
+      <div style="display:flex;gap:4px;" id="et-rpe-btns">
+        <button onclick="setExtraRPE(1)" id="et-rpe-1" style="flex:1;padding:5px 2px;background:none;border:1px solid var(--border);border-radius:3px;font-family:DM Mono,monospace;font-size:9px;color:var(--muted);cursor:pointer;">1</button><button onclick="setExtraRPE(2)" id="et-rpe-2" style="flex:1;padding:5px 2px;background:none;border:1px solid var(--border);border-radius:3px;font-family:DM Mono,monospace;font-size:9px;color:var(--muted);cursor:pointer;">2</button><button onclick="setExtraRPE(3)" id="et-rpe-3" style="flex:1;padding:5px 2px;background:none;border:1px solid var(--border);border-radius:3px;font-family:DM Mono,monospace;font-size:9px;color:var(--muted);cursor:pointer;">3</button><button onclick="setExtraRPE(4)" id="et-rpe-4" style="flex:1;padding:5px 2px;background:none;border:1px solid var(--border);border-radius:3px;font-family:DM Mono,monospace;font-size:9px;color:var(--muted);cursor:pointer;">4</button><button onclick="setExtraRPE(5)" id="et-rpe-5" style="flex:1;padding:5px 2px;background:none;border:1px solid var(--border);border-radius:3px;font-family:DM Mono,monospace;font-size:9px;color:var(--muted);cursor:pointer;">5</button><button onclick="setExtraRPE(6)" id="et-rpe-6" style="flex:1;padding:5px 2px;background:none;border:1px solid var(--border);border-radius:3px;font-family:DM Mono,monospace;font-size:9px;color:var(--muted);cursor:pointer;">6</button><button onclick="setExtraRPE(7)" id="et-rpe-7" style="flex:1;padding:5px 2px;background:none;border:1px solid var(--border);border-radius:3px;font-family:DM Mono,monospace;font-size:9px;color:var(--muted);cursor:pointer;">7</button><button onclick="setExtraRPE(8)" id="et-rpe-8" style="flex:1;padding:5px 2px;background:none;border:1px solid var(--border);border-radius:3px;font-family:DM Mono,monospace;font-size:9px;color:var(--muted);cursor:pointer;">8</button><button onclick="setExtraRPE(9)" id="et-rpe-9" style="flex:1;padding:5px 2px;background:none;border:1px solid var(--border);border-radius:3px;font-family:DM Mono,monospace;font-size:9px;color:var(--muted);cursor:pointer;">9</button><button onclick="setExtraRPE(10)" id="et-rpe-10" style="flex:1;padding:5px 2px;background:none;border:1px solid var(--border);border-radius:3px;font-family:DM Mono,monospace;font-size:9px;color:var(--muted);cursor:pointer;">10</button>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;">
+      <button onclick="closeExtraModal()"
+        style="flex:1;padding:10px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;font-family:DM Mono,monospace;font-size:10px;letter-spacing:1px;color:var(--muted);cursor:pointer;text-transform:uppercase;">
+        Cancelar
+      </button>
+      <button onclick="saveExtraTraining()"
+        style="flex:1;padding:10px;background:rgba(232,255,71,.12);border:1px solid rgba(232,255,71,.3);border-radius:6px;font-family:DM Mono,monospace;font-size:10px;letter-spacing:1px;color:var(--accent);cursor:pointer;text-transform:uppercase;">
+        Guardar
+      </button>
+    </div>
+  </div>
 </div>
 
 <!-- ===== GYM PAGE ===== -->
@@ -441,18 +513,6 @@ svg.chart{width:100%;overflow:visible;}
     <div class="gym-note">Pecho, espalda, hombros, bíceps, tríceps y core. Poleas y mancuernas. Descansá 60–75" entre series.</div>
     <div class="exercise-list" id="gym-day2"></div>
   </div>
-  <div class="gym-section">
-    <div class="gym-title">Entrada en Calor</div>
-    <div class="gym-subtitle">8–10 min antes de cada sesión</div>
-    <div class="exercise-list" id="gym-warmup"></div>
-  </div>
-
-  <div class="gym-section">
-    <div class="gym-title">Estiramiento</div>
-    <div class="gym-subtitle">8–10 min después de cada sesión</div>
-    <div class="exercise-list" id="gym-stretch"></div>
-  </div>
-
   <div class="gym-section">
     <div class="gym-title">Full Body — Sem B · Jue</div>
     <div class="gym-subtitle">Sesión única · Semanas B</div>
@@ -1002,6 +1062,8 @@ function updateStats(){
   Object.values(s).forEach(v=>{
     if(v?.status==='done'){sessions++;km+=parseFloat(v.distReal)||parseFloat(v.km)||0;}
   });
+  // Add extras km
+  (s._extras||[]).forEach(function(e){if(e.km)km+=parseFloat(e.km)||0;});
   // Count total planned sessions
   let totalSess=0;
   WEEKS.forEach(w=>totalSess+=w.sess.length);
@@ -1235,6 +1297,7 @@ function render(){
   });
 
   updateStats();
+  renderExtras();
 
   const race=new Date(2026,8,6);
   const wl=Math.max(0,Math.ceil((race-TODAY)/(7*24*3600*1000)));
@@ -3087,133 +3150,404 @@ function cleanAllWeightLogs(){
   if(changed){s._gymWeights=logs;saveState(s);}
 }
 
-// ===== AI NUTRITION =====
-let _aiMode='calc';
-let _aiLastResult=null;
+// ===== OPEN FOOD FACTS =====
+let _offSelected=null;
 
-function setAIMode(mode){
-  _aiMode=mode;
-  const calcBtn=document.getElementById('ai-btn-calc');
-  const suggestBtn=document.getElementById('ai-btn-suggest');
-  const inputArea=document.getElementById('ai-input-area');
-  const foodInput=document.getElementById('ai-food-input');
-  if(mode==='calc'){
-    calcBtn.style.background='rgba(232,255,71,.2)';
-    suggestBtn.style.background='rgba(71,196,255,.08)';
-    inputArea.style.display='block';
-    foodInput.placeholder='Describí el alimento... ej: 200g de pechuga de pollo a la plancha con arroz';
-  } else {
-    calcBtn.style.background='rgba(232,255,71,.08)';
-    suggestBtn.style.background='rgba(71,196,255,.2)';
-    inputArea.style.display='block';
-    foodInput.placeholder='Describí qué comiste hoy y qué macros te faltan... o dejá vacío para sugerencia automática';
-  }
-}
-
-async function askNutriAI(){
-  const input=document.getElementById('ai-food-input').value.trim();
-  const loading=document.getElementById('ai-loading');
-  const responseDiv=document.getElementById('ai-response');
-  const responseText=document.getElementById('ai-response-text');
-  const addBtn=document.getElementById('ai-add-btn');
-
+async function searchFood(){
+  const query=document.getElementById('off-search-input').value.trim();
+  if(!query)return;
+  const loading=document.getElementById('off-loading');
+  const results=document.getElementById('off-results');
+  const addArea=document.getElementById('off-add-area');
   loading.style.display='block';
-  responseDiv.style.display='none';
-  addBtn.style.display='none';
-
-  const key=nutriDateKey(nutriCurrentDate);
-  const target=getTarget(key);
-  const nd=getNutriData();
-  const dayData=nd[key]||{};
-
-  let prompt='';
-  if(_aiMode==='calc'){
-    if(!input){loading.style.display='none';alert('Describí el alimento primero');return;}
-    prompt=`Eres un nutricionista deportivo. El usuario come lo siguiente: "${input}".
-Estimá los macronutrientes de forma precisa.
-Responde SOLO con este JSON sin ningún texto adicional ni backticks:
-{"desc":"nombre corto del alimento","kcal":número,"prot":número,"carb":número,"fat":número,"fibra":número}
-Todos los valores en números enteros. kcal totales, prot/carb/fat/fibra en gramos.`;
-  } else {
-    const faltaKcal=Math.max(0,target.kcal-(dayData.kcal||0));
-    const faltaProt=Math.max(0,target.prot-(dayData.prot||0));
-    const faltaCarb=Math.max(0,target.carb-(dayData.carb||0));
-    const faltaFat=Math.max(0,target.fat-(dayData.fat||0));
-    const contextoInput=input?`El usuario dice: "${input}". `:'';
-    prompt=`Eres un nutricionista deportivo trabajando con un corredor amateur que prepara un medio maratón.
-${contextoInput}
-Target del día: ${target.kcal}kcal, ${target.prot}g prot, ${target.carb}g carb, ${target.fat}g grasa.
-Ya consumió: ${dayData.kcal||0}kcal, ${dayData.prot||0}g prot, ${dayData.carb||0}g carb, ${dayData.fat||0}g grasa.
-Le faltan: ${faltaKcal}kcal, ${faltaProt}g prot, ${faltaCarb}g carb, ${faltaFat}g grasa.
-Sugerí 2-3 opciones de alimentos concretos y accesibles para completar los macros faltantes.
-Sé breve, práctico y específico con las porciones. Responde en español rioplatense.`;
-  }
+  results.innerHTML='';
+  addArea.style.display='none';
+  _offSelected=null;
 
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:1000,
-        messages:[{role:'user',content:prompt}]
-      })
-    });
+    const url='https://world.openfoodfacts.org/cgi/search.pl?search_terms='+
+      encodeURIComponent(query)+'&search_simple=1&action=process&json=1&page_size=6&fields=product_name,nutriments,serving_size,brands';
+    const res=await fetch(url);
     const data=await res.json();
-    const text=data.content?.[0]?.text||'';
-
     loading.style.display='none';
-    responseDiv.style.display='block';
 
-    if(_aiMode==='calc'){
-      try{
-        const clean=text.replace(/```json|```/g,'').trim();
-        const parsed=JSON.parse(clean);
-        _aiLastResult=parsed;
-        responseText.innerHTML=
-          '<div style="font-family:DM Mono,monospace;font-size:11px;margin-bottom:8px;color:var(--accent);">'+parsed.desc+'</div>'+
-          '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;">'+
-          [['kcal',parsed.kcal,'var(--accent)'],['Prot',parsed.prot+'g','#4ade80'],
-           ['Carb',parsed.carb+'g','#fbbf24'],['Grasa',parsed.fat+'g','#fb923c'],
-           ['Fibra',parsed.fibra+'g','var(--accent2)']].map(function(item){
-            return '<div style="background:rgba(255,255,255,.04);border-radius:4px;padding:6px;text-align:center;">'+
-              '<div style="font-family:Bebas Neue,sans-serif;font-size:18px;color:'+item[2]+';">'+item[1]+'</div>'+
-              '<div style="font-family:DM Mono,monospace;font-size:8px;color:var(--muted);">'+item[0]+'</div>'+
-              '</div>';
-          }).join('')+
-          '</div>';
-        addBtn.style.display='block';
-      }catch(e){
-        responseText.textContent=text;
-      }
-    } else {
-      responseText.innerHTML=text.split('\n').join('<br>');
+    const products=(data.products||[]).filter(function(p){
+      return p.product_name&&p.nutriments&&p.nutriments['energy-kcal_100g']!=null;
+    });
+
+    if(!products.length){
+      results.innerHTML='<div style="font-family:DM Mono,monospace;font-size:11px;color:var(--muted);text-align:center;padding:12px;">Sin resultados. Probá con otro término.</div>';
+      return;
     }
+
+    results.innerHTML=products.map(function(p,i){
+      const n=p.nutriments;
+      const kcal=Math.round(n['energy-kcal_100g']||0);
+      const prot=Math.round(n['proteins_100g']||0);
+      const carb=Math.round(n['carbohydrates_100g']||0);
+      const fat=Math.round(n['fat_100g']||0);
+      const fibra=Math.round(n['fiber_100g']||0);
+      const brand=p.brands?(' · '+p.brands.split(',')[0]):'';
+      return '<div onclick="selectOFFProduct('+i+')" data-idx="'+i+'" '+
+        'style="padding:10px 12px;margin-bottom:6px;background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:6px;cursor:pointer;transition:border-color .15s;" '+
+        '>'+
+        '<div style="font-size:12px;font-weight:600;margin-bottom:4px;">'+p.product_name+brand+'</div>'+
+        '<div style="display:flex;gap:10px;font-family:DM Mono,monospace;font-size:10px;color:var(--muted);">'+
+          '<span style="color:var(--accent);">'+kcal+' kcal</span>'+
+          '<span>P '+prot+'g</span>'+
+          '<span>C '+carb+'g</span>'+
+          '<span>G '+fat+'g</span>'+
+          (fibra?'<span>F '+fibra+'g</span>':'')+
+          '<span style="color:var(--muted);font-size:9px;">por 100g</span>'+
+        '</div>'+
+      '</div>';
+    }).join('');
+
+    // Store products for selection
+    window._offProducts=products;
+
   }catch(err){
     loading.style.display='none';
-    responseDiv.style.display='block';
-    responseText.textContent='Error al conectar con la IA. Verificá tu conexión.';
+    results.innerHTML='<div style="font-family:DM Mono,monospace;font-size:11px;color:var(--fail);text-align:center;padding:12px;">Error de conexión. Verificá internet.</div>';
   }
 }
 
-function addAIFoodToMeal(){
-  if(!_aiLastResult)return;
-  // Open meals section and add the food
-  document.getElementById('meals-section').classList.add('open');
-  addMealRow({
-    name:'Snack',
-    desc:_aiLastResult.desc,
-    kcal:_aiLastResult.kcal,
-    prot:_aiLastResult.prot,
-    carb:_aiLastResult.carb,
-    fat:_aiLastResult.fat,
-    fibra:_aiLastResult.fibra
+function selectOFFProduct(idx){
+  const p=window._offProducts[idx];
+  if(!p)return;
+  _offSelected=p;
+
+  // Highlight selected
+  document.querySelectorAll('#off-results > div').forEach(function(el,i){
+    el.style.borderColor=i===idx?'var(--accent)':'var(--border)';
+    el.style.background=i===idx?'rgba(232,255,71,.04)':'rgba(255,255,255,.02)';
   });
-  // Save to food history
-  saveFoodToHistory(_aiLastResult);
+
+  document.getElementById('off-selected-name').textContent=p.product_name;
+  document.getElementById('off-add-area').style.display='block';
+  updateOFFPreview();
+  document.getElementById('off-add-area').scrollIntoView({behavior:'smooth'});
+}
+
+function updateOFFPreview(){
+  if(!_offSelected)return;
+  const portion=parseFloat(document.getElementById('off-portion').value)||100;
+  const n=_offSelected.nutriments;
+  const factor=portion/100;
+  const kcal=Math.round((n['energy-kcal_100g']||0)*factor);
+  const prot=Math.round((n['proteins_100g']||0)*factor);
+  const carb=Math.round((n['carbohydrates_100g']||0)*factor);
+  const fat=Math.round((n['fat_100g']||0)*factor);
+  const fibra=Math.round((n['fiber_100g']||0)*factor);
+
+  const items=[
+    ['kcal',kcal,'var(--accent)'],
+    ['Prot',prot+'g','#4ade80'],
+    ['Carb',carb+'g','#fbbf24'],
+    ['Grasa',fat+'g','#fb923c'],
+    ['Fibra',fibra+'g','var(--accent2)']
+  ];
+  document.getElementById('off-preview').innerHTML=items.map(function(item){
+    return '<div style="background:rgba(255,255,255,.04);border-radius:4px;padding:6px;text-align:center;">'+
+      '<div style="font-family:Bebas Neue,sans-serif;font-size:18px;color:'+item[2]+';line-height:1;">'+item[1]+'</div>'+
+      '<div style="font-family:DM Mono,monospace;font-size:8px;color:var(--muted);margin-top:2px;">'+item[0]+'</div>'+
+      '</div>';
+  }).join('');
+}
+
+function addOFFFood(){
+  if(!_offSelected)return;
+  const portion=parseFloat(document.getElementById('off-portion').value)||100;
+  const mealName=document.getElementById('off-meal-name').value;
+  const n=_offSelected.nutriments;
+  const factor=portion/100;
+  const food={
+    desc:_offSelected.product_name+(portion!==100?' ('+portion+'g)':''),
+    kcal:Math.round((n['energy-kcal_100g']||0)*factor),
+    prot:Math.round((n['proteins_100g']||0)*factor),
+    carb:Math.round((n['carbohydrates_100g']||0)*factor),
+    fat:Math.round((n['fat_100g']||0)*factor),
+    fibra:Math.round((n['fiber_100g']||0)*factor),
+  };
+  // Open meals section and add row
+  document.getElementById('meals-section').classList.add('open');
+  addMealRow({name:mealName,...food});
+  saveFoodToHistory(food);
   recalcMealTotals();
+  // Reset
+  document.getElementById('off-results').innerHTML='';
+  document.getElementById('off-add-area').style.display='none';
+  document.getElementById('off-search-input').value='';
+  _offSelected=null;
+  window._offProducts=[];
   // Scroll to meals
-  document.getElementById('meals-section').scrollIntoView({behavior:'smooth'});
+  setTimeout(function(){document.getElementById('meals-section').scrollIntoView({behavior:'smooth'});},200);
+}
+
+// ===== EXTRA TRAINING =====
+let _extraType='run';
+let _extraRPE=0;
+
+function openExtraTraining(){
+  const modal=document.getElementById('extra-modal');
+  modal.style.display='flex';
+  // Set today's date
+  const today=new Date();
+  const pad=n=>String(n).padStart(2,'0');
+  document.getElementById('et-date').value=today.getFullYear()+'-'+pad(today.getMonth()+1)+'-'+pad(today.getDate());
+  _extraType='run';
+  _extraRPE=0;
+  setExtraType('run');
+}
+
+function closeExtraModal(){
+  document.getElementById('extra-modal').style.display='none';
+}
+
+function setExtraType(type){
+  _extraType=type;
+  ['run','bike','gym'].forEach(function(t){
+    const btn=document.getElementById('et-'+t);
+    if(!btn)return;
+    const isActive=t===type;
+    btn.style.background=isActive?'rgba(232,255,71,.15)':'rgba(255,255,255,.04)';
+    btn.style.borderColor=isActive?'rgba(232,255,71,.5)':'var(--border)';
+    btn.style.color=isActive?'var(--accent)':'var(--muted)';
+  });
+  // Show/hide km field
+  const kmField=document.getElementById('et-km-field');
+  if(kmField)kmField.style.display=type==='gym'?'none':'block';
+}
+
+function setExtraRPE(val){
+  _extraRPE=val;
+  const rpeColors=['','#4ade80','#86efac','#86efac','#fbbf24','#fbbf24','#fb923c','#f87171','#ef4444','#dc2626','#991b1b'];
+  for(var i=1;i<=10;i++){
+    const btn=document.getElementById('et-rpe-'+i);
+    if(!btn)continue;
+    btn.style.background=i===val?rpeColors[i]:'none';
+    btn.style.color=i===val?'#000':'var(--muted)';
+    btn.style.borderColor=i===val?rpeColors[i]:'var(--border)';
+  }
+}
+
+function saveExtraTraining(){
+  const date=document.getElementById('et-date').value;
+  const desc=document.getElementById('et-desc').value||(_extraType==='run'?'Salida extra':_extraType==='bike'?'Bici extra':'Gym extra');
+  const km=parseFloat(document.getElementById('et-km').value)||0;
+  const time=document.getElementById('et-time').value||'';
+  if(!date){alert('Seleccioná una fecha');return;}
+
+  const icons={run:'🏃',bike:'🚴',gym:'💪'};
+  const s=getState();
+  if(!s._extras)s._extras=[];
+  const entry={
+    id:Date.now(),
+    date,type:_extraType,
+    icon:icons[_extraType],
+    desc,km,time,rpe:_extraRPE,
+  };
+  // Calc pace if run
+  if(_extraType==='run'&&km>0&&time){
+    const parts=time.split(':');
+    let secs=parts.length===2?parseInt(parts[0])*60+parseInt(parts[1]):parseInt(parts[0])*3600+parseInt(parts[1])*60+parseInt(parts[2]||0);
+    if(secs>0){const spk=secs/km;entry.pace=Math.floor(spk/60)+':'+String(Math.round(spk%60)).padStart(2,'0')+' /km';}
+  }
+  s._extras.push(entry);
+  saveState(s);
+  closeExtraModal();
+  renderExtras();
+  updateStats();
+  renderStats();
+  // Clear form
+  document.getElementById('et-desc').value='';
+  document.getElementById('et-km').value='';
+  document.getElementById('et-time').value='';
+}
+
+function renderExtras(){
+  const s=getState();
+  const extras=s._extras||[];
+  const el=document.getElementById('extras-list');
+  if(!el)return;
+  if(!extras.length){el.innerHTML='';return;}
+  el.innerHTML='<div style="margin-bottom:12px;">'+
+    extras.slice().reverse().map(function(e){
+      const d=new Date(e.date+'T00:00:00');
+      const mo=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+      const dateLabel=d.getDate()+' '+mo[d.getMonth()];
+      return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">'+
+        '<span style="font-size:18px;">'+e.icon+'</span>'+
+        '<div style="flex:1;">'+
+          '<div style="font-size:12px;font-weight:600;">'+e.desc+'</div>'+
+          '<div style="font-family:DM Mono,monospace;font-size:10px;color:var(--muted);">'+dateLabel+
+            (e.km?' · '+e.km+' km':'')+
+            (e.time?' · '+e.time:'')+
+            (e.pace?' · '+e.pace:'')+
+            (e.rpe?' · RPE '+e.rpe:'')+
+          '</div>'+
+        '</div>'+
+        '<button onclick="deleteExtra('+e.id+')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;">✕</button>'+
+      '</div>';
+    }).join('')+
+  '</div>';
+}
+
+function deleteExtra(id){
+  const s=getState();
+  s._extras=(s._extras||[]).filter(function(e){return e.id!==id;});
+  saveState(s);
+  renderExtras();
+  updateStats();
+}
+
+// ===== PACE CHARTS (3 separate) =====
+function renderPaceCharts(runs){
+  const pc=document.getElementById('pace-chart');
+  if(!pc)return;
+
+  const rpeColors=['','#4ade80','#86efac','#86efac','#fbbf24','#fbbf24','#fb923c','#f87171','#ef4444','#dc2626','#991b1b'];
+
+  // Classify runs
+  const longRuns=[],shortRuns=[],intervalRuns=[];
+  runs.filter(function(r){return r.pace&&r.pace!=='—';}).forEach(function(r){
+    const paceMin=(function(p){var pts=p.split(':');return parseFloat(pts[0])+(parseFloat(pts[1]||0)/60);})(r.pace);
+    const d=r.desc||'';
+    if(d.includes('largo')||d.includes('MÁXIMO')||d.includes('moderado')) longRuns.push({...r,paceMin});
+    else if(d.includes('Pasadas')||d.includes('pasadas')||d.includes('Tempo')||d.includes('tempo')||d.includes('breve')||d.includes('activación')) intervalRuns.push({...r,paceMin});
+    else shortRuns.push({...r,paceMin});
+  });
+
+  // Also add extras
+  const s=getState();
+  const extras=(s._extras||[]).filter(function(e){return e.type==='run'&&e.pace;});
+  extras.forEach(function(e){
+    const paceMin=(function(p){if(!p)return 0;var pts=p.split(':');return parseFloat(pts[0])+(parseFloat(pts[1]||0)/60);})(e.pace);
+    if(paceMin>0) longRuns.push({desc:e.desc,pace:e.pace,paceMin,dateLabel:e.date.slice(5),km:e.km,rpe:e.rpe,isExtra:true});
+  });
+
+  // Build 3 chart canvases
+  const RACE_DATE=new Date('2026-09-06');
+
+  pc.innerHTML='<div style="display:flex;flex-direction:column;gap:20px;">';
+
+  function buildChart(containerId, runs2, label, color, showProjection){
+    if(!runs2.length) return '<div style="font-family:DM Mono,monospace;font-size:11px;color:var(--muted);padding:8px;">Sin datos de '+label+' aún</div>';
+    const chartId='paceChart_'+containerId+'_'+Date.now();
+    return '<div>'+
+      '<div style="font-family:DM Mono,monospace;font-size:10px;letter-spacing:2px;color:'+color+';text-transform:uppercase;margin-bottom:6px;">'+label+'</div>'+
+      '<div style="position:relative;width:100%;height:160px;"><canvas id="'+chartId+'"></canvas></div>'+
+      (showProjection&&runs2.length>=2?'<div id="proj-'+chartId+'" style="font-family:DM Mono,monospace;font-size:10px;color:var(--muted);margin-top:6px;"></div>':'')+
+      '</div>';
+  }
+
+  pc.innerHTML=
+    buildChart('long',longRuns,'Fondo largo','var(--accent)',true)+
+    buildChart('short',shortRuns,'Fondo corto','var(--accent2)',false)+
+    buildChart('interval',intervalRuns,'Pasadas / tempo','#fb923c',false);
+
+  // Init charts after render
+  if(typeof Chart==='undefined')return;
+  setTimeout(function(){
+    function initChart(runs2,containerId,color,showProjection){
+      if(!runs2.length)return;
+      const chartId=document.querySelector('[id^="paceChart_'+containerId+'"]');
+      if(!chartId)return;
+      const fmtPace=function(v){var m=Math.floor(v);var s=Math.round((v-m)*60);return m+':'+(s<10?'0':'')+s;};
+      const isDark=matchMedia('(prefers-color-scheme:dark)').matches;
+      const gridColor=isDark?'rgba(255,255,255,.06)':'rgba(0,0,0,.06)';
+      const textColor=isDark?'#aaa':'#888';
+      const paceVals=runs2.map(function(r){return r.paceMin;});
+      const minP=Math.min.apply(null,paceVals)-.3;
+      const maxP=Math.max.apply(null,paceVals)+.3;
+
+      // Projection for fondo largo
+      let projDataset=null;
+      if(showProjection&&runs2.length>=2){
+        // Linear regression
+        const n=runs2.length;
+        const xs=runs2.map(function(_,i){return i;});
+        const ys=paceVals;
+        const sumX=xs.reduce(function(a,b){return a+b;},0);
+        const sumY=ys.reduce(function(a,b){return a+b;},0);
+        const sumXY=xs.reduce(function(a,x,i){return a+x*ys[i];},0);
+        const sumX2=xs.reduce(function(a,x){return a+x*x;},0);
+        const slope=(n*sumXY-sumX*sumY)/(n*sumX2-sumX*sumX);
+        const intercept=(sumY-slope*sumX)/n;
+
+        // Project to race day (weeks from last run)
+        const today=new Date();
+        const weeksToRace=Math.round((RACE_DATE-today)/(7*24*3600*1000));
+        const lastRunIdx=n-1;
+        const projSteps=Math.max(4,weeksToRace);
+        const projPace=intercept+slope*(lastRunIdx+projSteps);
+        const projPaceStr=fmtPace(Math.max(3.5,projPace));
+        const raceTime21=projPace*21.097;
+        const raceH=Math.floor(raceTime21/60);
+        const raceM=Math.round(raceTime21%60);
+        const raceTStr=raceH+'h '+String(raceM).padStart(2,'0')+'min';
+
+        const projEl=document.getElementById('proj-'+chartId.id);
+        if(projEl){
+          projEl.innerHTML=
+            '📈 Proyección al 6 Sep: <strong style="color:var(--accent);">'+projPaceStr+' /km</strong> · '+
+            'Tiempo estimado en carrera: <strong style="color:var(--ok);">'+raceTStr+'</strong>'+
+            '<span style="color:var(--muted);"> (basado en tu progresión actual)</span>';
+        }
+
+        // Build projection line data
+        const projLabels=runs2.map(function(r){return r.dateLabel||'';});
+        for(var i=1;i<=Math.min(4,projSteps);i++){
+          projLabels.push('→S'+(n+i));
+        }
+        const projData=runs2.map(function(){return null;});
+        projData[projData.length-1]=paceVals[paceVals.length-1]; // connect from last point
+        for(var j=1;j<=Math.min(4,projSteps);j++){
+          projData.push(Math.max(3.5,intercept+slope*(lastRunIdx+j)));
+        }
+        projDataset={
+          label:'Proyección',
+          data:projData,
+          borderColor:'rgba(232,255,71,.4)',
+          borderDash:[6,4],
+          pointRadius:0,
+          tension:0.3,
+          spanGaps:true,
+          fill:false,
+        };
+      }
+
+      const datasets=[{
+        label:label,
+        data:paceVals,
+        borderColor:color,
+        backgroundColor:color.replace(')',',0.08)').replace('var(','rgba(').replace('--accent','232,255,71').replace('--accent2','71,196,255'),
+        pointBackgroundColor:color,
+        pointRadius:5,
+        tension:0.3,
+        fill:false,
+        spanGaps:false,
+      }];
+      if(projDataset)datasets.push(projDataset);
+
+      new Chart(chartId,{
+        type:'line',
+        data:{labels:runs2.map(function(r){return r.dateLabel||'';}),datasets},
+        options:{
+          responsive:true,maintainAspectRatio:false,
+          plugins:{legend:{display:false}},
+          scales:{
+            x:{grid:{color:gridColor},ticks:{color:textColor,font:{size:10}}},
+            y:{reverse:true,grid:{color:gridColor},min:minP,max:maxP,
+               ticks:{color:textColor,font:{size:10},callback:fmtPace}}
+          }
+        }
+      });
+    }
+    initChart(longRuns,'long','var(--accent)',true);
+    initChart(shortRuns,'short','var(--accent2)',false);
+    initChart(intervalRuns,'interval','#fb923c',false);
+  },150);
 }
 
 // ===== INIT =====
@@ -3223,8 +3557,6 @@ loadStateFromDB().then(function(){
   renderGym(GYM_DAY1,'gym-day1');
   renderGym(GYM_DAY2,'gym-day2');
   renderGym(GYM_FULL,'gym-full');
-  renderGym(GYM_WARMUP,'gym-warmup');
-  renderGym(GYM_STRETCH,'gym-stretch');
   render();
   initNotifBtn();
   preloadFoodHistory();
