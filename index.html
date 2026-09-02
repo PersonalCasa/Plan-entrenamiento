@@ -262,9 +262,13 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
   <div class="weeks-grid" id="grid-history" style="display:none;"></div>
   <div id="grid-current"></div>
 
-  <!-- Weeks left -->
-  <div style="text-align:center;margin-top:16px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);">
-    Maratón Montevideo — <span id="weeks-left" style="color:var(--accent);">—</span> restantes
+  <!-- Countdown hero -->
+  <div id="countdown-wrap" style="display:none;margin-top:16px;padding:14px;background:var(--card);border:1px solid var(--border);border-radius:10px;text-align:center;">
+    <div style="font-size:9px;letter-spacing:2px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:4px;">MARATÓN MONTEVIDEO 2027</div>
+    <div style="display:flex;align-items:baseline;justify-content:center;gap:6px;">
+      <span id="weeks-left" style="font-size:48px;font-weight:900;color:var(--accent);line-height:1;font-family:Arial,sans-serif;">—</span>
+      <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);">semanas</span>
+    </div>
   </div>
 </div>
 
@@ -990,22 +994,43 @@ function buildCard(w,isCurrent,isPast){
   const mo=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   const startD=days[0],endD=days[6];
   const dateRange=`${startD.getDate()} ${mo[startD.getMonth()]} – ${endD.getDate()} ${mo[endD.getMonth()]}`;
-
   const phaseLabel={base:'Base aeróbica',build1:'Construcción I',build2:'Construcción II',peak:'Pico',taper:'Taper',race:'¡Carrera!'}[w.phase]||w.phase;
 
-  return `<div class="week-card ${isCurrent?'current':''}">
+  if(isCurrent){
+    return `<div class="week-card current" style="overflow:hidden;">
+      <div style="position:relative;padding:18px 16px 14px;overflow:hidden;">
+        <div style="position:absolute;right:-12px;top:-20px;font-size:130px;font-weight:900;color:rgba(0,180,255,0.04);line-height:1;pointer-events:none;user-select:none;font-family:Arial,sans-serif;">42.2</div>
+        <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;color:rgba(0,180,255,0.5);margin-bottom:4px;">▸ SEMANA ACTUAL</div>
+        <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px;">
+          <span style="font-size:52px;font-weight:900;color:var(--accent);line-height:1;font-family:Arial,sans-serif;">${String(w.n).padStart(2,'0')}</span>
+          <div>
+            <div style="font-size:11px;color:var(--text);font-weight:500;">${phaseLabel}</div>
+            <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);">${dateRange} · ${w.vol} km</div>
+          </div>
+        </div>
+        <div style="display:inline-block;padding:3px 10px;background:rgba(0,180,255,0.08);border:1px solid rgba(0,180,255,0.2);border-radius:4px;font-family:'DM Mono',monospace;font-size:9px;color:var(--accent);letter-spacing:1px;margin-bottom:14px;">SEMANA ${w.type}</div>
+        <div class="cal-grid">${cal}</div>
+        <div style="display:flex;align-items:center;gap:6px;margin:10px 0 6px;"><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);">PROGRESO</span>${dots}</div>
+      </div>
+      <div style="padding:0 16px 16px;">
+        ${sessions}
+      </div>
+    </div>`;
+  }
+
+  return `<div class="week-card">
     <div class="week-header" onclick="this.parentElement.querySelector('.week-body').style.display=this.parentElement.querySelector('.week-body').style.display==='block'?'none':'block'">
-      <div class="week-num ${isCurrent?'current':''}">${String(w.n).padStart(2,'0')}</div>
+      <div class="week-num">${String(w.n).padStart(2,'0')}</div>
       <div class="week-info">
         <div class="week-dates">${dateRange}</div>
         <div style="display:flex;align-items:center;gap:6px;margin-top:3px;">
           <span class="week-badge badge-${w.type}">${w.type}</span>
-          <span class="week-vol" style="font-size:10px;">${w.vol} km running</span>
+          <span class="week-vol" style="font-size:10px;">${w.vol} km</span>
         </div>
       </div>
       <span style="font-size:10px;color:var(--muted);">▼</span>
     </div>
-    <div class="week-body" style="display:${isCurrent?'block':'none'}">
+    <div class="week-body" style="display:none;">
       <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:8px;">${phaseLabel}</div>
       <div class="cal-grid">${cal}</div>
       <div style="display:flex;align-items:center;gap:6px;margin:8px 0;"><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);">PROGRESO</span>${dots}</div>
@@ -1033,7 +1058,9 @@ function render(){
   const race=new Date(2027,3,27);
   const wl=Math.max(0,Math.ceil((race-new Date())/(7*24*3600*1000)));
   const el=document.getElementById('weeks-left');
-  if(el)el.textContent=wl>0?`${wl} sem`:'¡Hoy!';
+  const cw=document.getElementById('countdown-wrap');
+  if(el){el.textContent=wl>0?String(wl):'¡Hoy!';}
+  if(cw){cw.style.display=current?'none':'block';}
 }
 
 function toggleHistory(){
