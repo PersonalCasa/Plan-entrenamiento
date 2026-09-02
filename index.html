@@ -1043,11 +1043,13 @@ function buildCard(w,isCurrent,isPast){
 function render(){
   const past=WEEKS.filter(w=>isPastWeek(w.n-1));
   const current=WEEKS.find(w=>isCurrentWeek(w.n-1));
-  const upcoming=WEEKS.filter(w=>!isPastWeek(w.n-1)&&!isCurrentWeek(w.n-1));
+  // Show week 1 as current if plan hasn't started yet
+  const displayCurrent=current||(past.length===0?WEEKS[0]:null);
+  const upcoming=WEEKS.filter(w=>!isPastWeek(w.n-1)&&w!==displayCurrent);
 
   const cws=document.getElementById('current-week-section');
-  if(current){
-    cws.innerHTML=`<div class="current-spotlight"><div class="spotlight-label">▸ SEMANA ACTUAL</div>${buildCard(current,true,false)}</div>`;
+  if(displayCurrent){
+    cws.innerHTML=`<div class="current-spotlight"><div class="spotlight-label">▸ ${current?'SEMANA ACTUAL':'PRÓXIMA SEMANA'}</div>${buildCard(displayCurrent,true,false)}</div>`;
   } else {cws.innerHTML='';}
 
   document.getElementById('grid-history').innerHTML=past.slice().reverse().map(w=>buildCard(w,false,true)).join('');
@@ -1061,7 +1063,7 @@ function render(){
   const el=document.getElementById('weeks-left');
   const cw=document.getElementById('countdown-wrap');
   if(el){el.textContent=wl>0?String(wl):'¡Hoy!';}
-  if(cw){cw.style.display=current?'none':'block';}
+  if(cw){cw.style.display='block';}
 }
 
 function toggleHistory(){
