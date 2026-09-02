@@ -1,4 +1,4 @@
-const CACHE = 'pde-plan-v23';
+const CACHE = 'runplan-marathon-v1';
 const STATIC = ['/Plan-entrenamiento/', '/Plan-entrenamiento/index.html', '/Plan-entrenamiento/manifest.json', '/Plan-entrenamiento/icon-192.png', '/Plan-entrenamiento/icon-512.png'];
 
 self.addEventListener('install', e => {
