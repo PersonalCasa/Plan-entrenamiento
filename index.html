@@ -276,17 +276,17 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
 <!-- GYM PAGE -->
 <div class="page" id="page-gym">
   <div class="gym-section">
-    <div class="gym-title">Día 1 — Jue · Inferior</div>
+    <div class="gym-title">Tren Inferior</div>
     <div class="gym-subtitle">Tren inferior + core · Semanas A</div>
     <div class="exercise-list" id="gym-day1"></div>
   </div>
   <div class="gym-section">
-    <div class="gym-title">Día 2 — Jue · Superior</div>
+    <div class="gym-title">Tren Superior</div>
     <div class="gym-subtitle">Tren superior + core · Semanas B</div>
     <div class="exercise-list" id="gym-day2"></div>
   </div>
   <div class="gym-section">
-    <div class="gym-title">Full Body — Jue</div>
+    <div class="gym-title">Full Body</div>
     <div class="gym-subtitle">Tren completo · Semanas alternadas</div>
     <div class="exercise-list" id="gym-full"></div>
   </div>
@@ -1166,7 +1166,7 @@ function updateStats(){
 
 function renderStats(){
   const s=getState();
-  const weights=[...(s._prevWeights||[]),...(s._weights||[])];
+  const weights=s._weights||[];
   const runs=[];
 
   // Previous cycle runs
@@ -1336,7 +1336,7 @@ function renderPaceCharts(runs){
     svg+='</svg>';
     let projText='';
     if(projPace&&projCorr){
-      const rt=projCorr*21.097,rH=Math.floor(rt/60),rM=Math.round(rt%60);
+      const rt=projCorr*42.195,rH=Math.floor(rt/60),rM=Math.round(rt%60);
       projText=`<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:6px;padding-top:6px;border-top:1px solid var(--border);">📈 Proyección fondo: <strong style="color:var(--accent)">${fmtP(projPace)}/km</strong> · 🏁 Carrera (−8%): <strong style="color:var(--accent2)">${fmtP(projCorr)}/km</strong> · <strong style="color:var(--ok)">${rH}h ${String(rM).padStart(2,'0')}min</strong></div>`;
     }
     return svg+projText;
